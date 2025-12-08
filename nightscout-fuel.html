@@ -5,190 +5,355 @@
   <title>Nightscout Fuel Helper</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    :root {
+      --bg-main: #000;
+      --card-bg: #111;
+      --card-border: #333;
+      --text-main: #eee;
+      --accent: #0a84ff;
+      --low: #003f8c;
+      --near-low: #005b99;
+      --sweet: #004d40;
+      --high: #7b3f00;
+    }
+
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       margin: 0;
-      padding: 0.75rem;
-      background: #000;
-      color: #eee;
+      padding: 0.7rem;
+      background: var(--bg-main);
+      color: var(--text-main);
     }
+
     h1 {
       font-size: 1.1rem;
-      margin: 0 0 0.25rem;
+      margin: 0;
       text-align: center;
     }
-    .section {
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 0.5rem;
+      gap: 0.4rem;
     }
-    label {
-      font-size: 0.8rem;
-      display: block;
-      margin-bottom: 0.15rem;
+
+    .top-bar h1 {
+      flex: 1;
+      text-align: center;
     }
-    input {
-      width: 100%;
-      padding: 0.4rem;
-      border-radius: 0.35rem;
+
+    .icon-btn {
       border: none;
-      font-size: 0.9rem;
-      box-sizing: border-box;
+      border-radius: 999px;
+      background: #222;
+      color: #ccc;
+      width: 2.1rem;
+      height: 2.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      padding: 0;
     }
+
+    .icon-btn:active {
+      background: #444;
+    }
+
+    .card {
+      border-radius: 0.7rem;
+      padding: 0.6rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      margin-bottom: 0.45rem;
+    }
+
+    .bg-strip {
+      border-radius: 0.7rem;
+      padding: 0.6rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .bg-value {
+      font-size: 2.1rem;
+      font-weight: 800;
+      margin-bottom: 0.1rem;
+    }
+
+    .bg-sub {
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+
+    .main-text {
+      font-size: 1.4rem;
+      text-align: center;
+      margin: 0.2rem 0 0.1rem;
+      font-weight: 700;
+    }
+
+    .sub-text {
+      text-align: center;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 0.1rem;
+    }
+
+    .status-text {
+      text-align: center;
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+
     .row {
       display: flex;
       gap: 0.3rem;
+      align-items: center;
+    }
+
+    .row + .row {
       margin-top: 0.25rem;
     }
+
     .row > div {
       flex: 1;
     }
-    button {
-      padding: 0.4rem;
+
+    label {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.35rem;
       border-radius: 0.4rem;
       border: none;
-      background: #333;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      background: #222;
       color: #eee;
-      font-size: 0.95rem;
     }
-    button.zone {
-      font-size: 1rem;
+
+    .mode-toggle {
+      display: flex;
+      border-radius: 999px;
+      background: #222;
+      padding: 0.12rem;
+      font-size: 0.85rem;
+    }
+
+    .mode-btn {
+      flex: 1;
+      border: none;
+      border-radius: 999px;
+      padding: 0.25rem 0.3rem;
+      background: transparent;
+      color: #aaa;
+    }
+
+    .mode-btn.active {
+      background: var(--accent);
+      color: #fff;
       font-weight: 600;
     }
-    button.zone.active {
-      background: #0a84ff;
+
+    .zone-buttons {
+      display: flex;
+      gap: 0.3rem;
+      margin-top: 0.35rem;
+    }
+
+    .zone-btn {
+      flex: 1;
+      border: none;
+      border-radius: 0.55rem;
+      padding: 0.45rem 0;
+      background: #222;
+      color: #ccc;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .zone-btn.active {
+      background: var(--accent);
       color: #fff;
     }
+
     .tiny {
       font-size: 0.7rem;
       opacity: 0.7;
       margin-top: 0.15rem;
-    }
-    .big-line {
       text-align: center;
-      font-size: 1.6rem;
-      margin: 0.3rem 0 0.1rem;
-      font-weight: 700;
     }
-    .sub-line {
-      text-align: center;
+
+    .timer-row {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.3rem;
+    }
+
+    .timer-row button {
+      border: none;
+      border-radius: 0.55rem;
+      padding: 0.4rem;
+      background: #222;
+      color: #eee;
       font-size: 0.9rem;
-      margin-bottom: 0.1rem;
+      flex: 1;
     }
-    .feed-line {
-      text-align: center;
-      font-size: 1.2rem;
-      margin-top: 0.25rem;
-      font-weight: 600;
+
+    .timer-row button:active {
+      background: #444;
     }
-    .status {
-      text-align: center;
-      font-size: 0.75rem;
-      opacity: 0.7;
-      margin-top: 0.2rem;
+
+    .settings-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
     }
-    .card {
-      border-radius: 0.6rem;
-      padding: 0.5rem;
-      background: #111;
-      border: 1px solid #333;
-      margin-bottom: 0.4rem;
+
+    .settings-panel.open {
+      max-height: 400px;
     }
   </style>
 </head>
 <body>
-  <h1>Nightscout Fuel Helper</h1>
-
-  <!-- SETTINGS -->
-  <div class="card section">
-    <label for="nsUrl">Nightscout URL (no trailing /)</label>
-    <input id="nsUrl" value="https://keithgarvin.us.nightscoutpro.com" style="display:none;" />
-
-    <label for="apiSecret" style="margin-top:0.25rem;">API Secret (optional)</label>
-    <input id="apiSecret" placeholder="leave blank if not needed" />
-
-    <div class="row">
-      <div>
-        <label for="ftp">FTP (watts)</label>
-        <input id="ftp" type="number" inputmode="numeric" value="305" />
-      </div>
-      <div>
-        <label for="useMmol">Units</label>
-        <button id="unitToggle">mmol/L</button>
-      </div>
-    </div>
-
-    <div class="tiny">
-      These values are stored only on this device (localStorage).  
-      Carb numbers are just your plan – confirm with your care team.
-    </div>
+  <div class="top-bar">
+    <button class="icon-btn" id="refreshBtn">⭮</button>
+    <h1>Fuel Helper</h1>
+    <button class="icon-btn" id="settingsToggle">⚙︎</button>
   </div>
 
-  <!-- CARBS PER ZONE -->
-  <div class="card section">
-    <label>Carbs per 20 min (adjust to your plan):</label>
-    <div class="row">
-      <div>
-        <label for="carbZ1">Z1</label>
-        <input id="carbZ1" type="number" value="0" />
-      </div>
-      <div>
-        <label for="carbZ2">Z2</label>
-        <input id="carbZ2" type="number" value="8" />
-      </div>
-      <div>
-        <label for="carbZ3">Z3</label>
-        <input id="carbZ3" type="number" value="12" />
-      </div>
-      <div>
-        <label for="carbZ4">Z4</label>
-        <input id="carbZ4" type="number" value="18" />
-      </div>
-      <div>
-        <label for="carbZ5">Z5</label>
-        <input id="carbZ5" type="number" value="22" />
-      </div>
-    </div>
-    <div class="tiny">
-      These are <strong>starting points only</strong>. Tune them based on your CGM data and care team advice.
-    </div>
+  <!-- BG strip with color coding -->
+  <div id="bgStrip" class="bg-strip" style="background: #222;">
+    <div id="bgValue" class="bg-value">--.--</div>
+    <div id="bgSub" class="bg-sub">Waiting for CGM…</div>
   </div>
 
-  <!-- ZONE BUTTONS -->
-  <div class="card section">
-    <label>Current zone (tap to set – use your Edge power reading):</label>
-    <div class="row" style="margin-top:0.3rem;">
-      <button class="zone" data-zone="1">Z1</button>
-      <button class="zone" data-zone="2">Z2</button>
-      <button class="zone" data-zone="3">Z3</button>
-      <button class="zone" data-zone="4">Z4</button>
-      <button class="zone" data-zone="5">Z5</button>
-    </div>
-    <div class="tiny">
-      We’ll still calculate zone boundaries from FTP, but zone selection is manual for now.
-    </div>
-  </div>
-
-  <!-- DISPLAY -->
+  <!-- Main fueling summary -->
   <div class="card">
-    <div class="big-line" id="bgLine">--.--</div>
-    <div class="sub-line" id="zoneLine">Zone --</div>
-    <div class="feed-line" id="feedLine">Fuel suggestion will appear here</div>
-    <div class="status" id="statusLine">Waiting for Nightscout…</div>
+    <div id="feedMain" class="main-text">Set zone to begin</div>
+    <div id="feedSub" class="sub-text"></div>
+    <div id="statusLine" class="status-text">Nightscout: idle</div>
+  </div>
+
+  <!-- Zone + timer card -->
+  <div class="card">
+    <div id="zoneLine" class="sub-text">Zone --</div>
+
+    <div class="zone-buttons">
+      <button class="zone-btn" data-zone="1">Z1</button>
+      <button class="zone-btn" data-zone="2">Z2</button>
+      <button class="zone-btn" data-zone="3">Z3</button>
+      <button class="zone-btn" data-zone="4">Z4</button>
+      <button class="zone-btn" data-zone="5">Z5</button>
+    </div>
+
+    <div class="timer-row">
+      <button id="logFeedBtn">Log feed now</button>
+      <button id="resetTimerBtn">Reset timer</button>
+    </div>
+    <div class="tiny" id="timerLine">No feed logged yet</div>
+  </div>
+
+  <!-- Slide-down settings -->
+  <div class="card settings-panel" id="settingsPanel">
+    <div class="row">
+      <div>
+        <label for="ftpInput">FTP (watts)</label>
+        <input id="ftpInput" type="number" inputmode="numeric" value="305" />
+      </div>
+      <div>
+        <label>BG units</label>
+        <button id="unitToggle" class="mode-btn active" style="width:100%; border-radius:0.4rem;">mmol/L</button>
+      </div>
+    </div>
+
+    <div style="margin-top:0.4rem;">
+      <label>Mode</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="training" id="modeTraining">Training</button>
+        <button class="mode-btn" data-mode="race" id="modeRace">Race</button>
+      </div>
+    </div>
+
+    <div style="margin-top:0.4rem;">
+      <label>Carbs per 20 min by zone</label>
+      <div class="row">
+        <div>
+          <label for="carbZ1">Z1</label>
+          <input id="carbZ1" type="number" />
+        </div>
+        <div>
+          <label for="carbZ2">Z2</label>
+          <input id="carbZ2" type="number" />
+        </div>
+        <div>
+          <label for="carbZ3">Z3</label>
+          <input id="carbZ3" type="number" />
+        </div>
+        <div>
+          <label for="carbZ4">Z4</label>
+          <input id="carbZ4" type="number" />
+        </div>
+        <div>
+          <label for="carbZ5">Z5</label>
+          <input id="carbZ5" type="number" />
+        </div>
+      </div>
+    </div>
+
+    <div class="tiny">
+      Training defaults (per 20'): Z2 ~8g, Z3 ~12g, Z4 ~18g, Z5 ~22g.  
+      Race defaults are more aggressive. Tune these with your care team as needed.
+    </div>
   </div>
 
   <script>
+    // ----- CONSTANTS -----
+    const NS_URL = "https://keithgarvin.us.nightscoutpro.com"; // hard-coded
+
+    // Default carb plans (per 20 min)
+    const DEFAULT_TRAINING = [0, 8, 12, 18, 22];
+    const DEFAULT_RACE     = [0, 10, 20, 25, 30];
+
     // ----- STATE -----
     let state = {
       useMmol: true,
+      mode: "training", // or "race"
       currentZone: null,
       lastBg: null,
       lastDirection: null,
-      lastDateMs: null
+      lastDateMs: null,
+      lastFeedTime: null
     };
 
-    const nsUrlInput = document.getElementById('nsUrl');
-    const apiSecretInput = document.getElementById('apiSecret');
-    const ftpInput = document.getElementById('ftp');
+    // ----- ELEMENTS -----
+    const bgStrip = document.getElementById('bgStrip');
+    const bgValue = document.getElementById('bgValue');
+    const bgSub = document.getElementById('bgSub');
+
+    const feedMain = document.getElementById('feedMain');
+    const feedSub = document.getElementById('feedSub');
+    const statusLine = document.getElementById('statusLine');
+    const zoneLine = document.getElementById('zoneLine');
+    const timerLine = document.getElementById('timerLine');
+
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsToggle = document.getElementById('settingsToggle');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    const modeTrainingBtn = document.getElementById('modeTraining');
+    const modeRaceBtn = document.getElementById('modeRace');
     const unitToggle = document.getElementById('unitToggle');
+
+    const ftpInput = document.getElementById('ftpInput');
     const carbInputs = [
       document.getElementById('carbZ1'),
       document.getElementById('carbZ2'),
@@ -197,56 +362,111 @@
       document.getElementById('carbZ5')
     ];
 
-    const bgLine = document.getElementById('bgLine');
-    const zoneLine = document.getElementById('zoneLine');
-    const feedLine = document.getElementById('feedLine');
-    const statusLine = document.getElementById('statusLine');
-    const zoneButtons = Array.from(document.querySelectorAll('button.zone'));
+    const zoneButtons = Array.from(document.querySelectorAll('.zone-btn'));
+    const logFeedBtn = document.getElementById('logFeedBtn');
+    const resetTimerBtn = document.getElementById('resetTimerBtn');
 
-    // ----- LOAD / SAVE SETTINGS -----
+    // ----- SETTINGS STORAGE -----
     function loadSettings() {
       try {
-        const saved = JSON.parse(localStorage.getItem('nsFuelSettings') || '{}');
-        if (saved.nsUrl) nsUrlInput.value = saved.nsUrl;
-        if (saved.apiSecret) apiSecretInput.value = saved.apiSecret;
+        const saved = JSON.parse(localStorage.getItem('nsFuelSettingsV2') || '{}');
+
         if (saved.ftp) ftpInput.value = saved.ftp;
+
         if (typeof saved.useMmol === 'boolean') {
           state.useMmol = saved.useMmol;
         }
         unitToggle.textContent = state.useMmol ? 'mmol/L' : 'mg/dL';
+        unitToggle.classList.toggle('active', state.useMmol);
 
-        if (saved.carbs && Array.isArray(saved.carbs) && saved.carbs.length === 5) {
-          saved.carbs.forEach((v, idx) => {
-            if (v != null && carbInputs[idx]) carbInputs[idx].value = v;
-          });
+        if (saved.mode === 'race' || saved.mode === 'training') {
+          state.mode = saved.mode;
         }
+
+        // Carb plans per mode
+        state.trainingCarbs = Array.isArray(saved.trainingCarbs) && saved.trainingCarbs.length === 5
+          ? saved.trainingCarbs
+          : DEFAULT_TRAINING.slice();
+
+        state.raceCarbs = Array.isArray(saved.raceCarbs) && saved.raceCarbs.length === 5
+          ? saved.raceCarbs
+          : DEFAULT_RACE.slice();
       } catch (e) {
-        console.log('settings load error', e);
+        state.trainingCarbs = DEFAULT_TRAINING.slice();
+        state.raceCarbs = DEFAULT_RACE.slice();
       }
+
+      // Initialize inputs based on mode
+      applyModeToInputs();
+      updateModeButtons();
     }
 
     function saveSettings() {
-      const carbs = carbInputs.map(inp => Number(inp.value) || 0);
       const settings = {
-        nsUrl: nsUrlInput.value.trim(),
-        apiSecret: apiSecretInput.value.trim(),
         ftp: Number(ftpInput.value) || null,
         useMmol: state.useMmol,
-        carbs
+        mode: state.mode,
+        trainingCarbs: state.trainingCarbs,
+        raceCarbs: state.raceCarbs
       };
-      localStorage.setItem('nsFuelSettings', JSON.stringify(settings));
+      localStorage.setItem('nsFuelSettingsV2', JSON.stringify(settings));
     }
 
-    nsUrlInput.addEventListener('change', saveSettings);
-    apiSecretInput.addEventListener('change', saveSettings);
-    ftpInput.addEventListener('change', saveSettings);
-    carbInputs.forEach(inp => inp.addEventListener('change', saveSettings));
+    function applyModeToInputs() {
+      const src = state.mode === 'race' ? state.raceCarbs : state.trainingCarbs;
+      src.forEach((v, idx) => {
+        if (carbInputs[idx]) carbInputs[idx].value = v;
+      });
+    }
 
+    function updateModeFromInputs() {
+      const values = carbInputs.map(inp => Number(inp.value) || 0);
+      if (state.mode === 'race') {
+        state.raceCarbs = values;
+      } else {
+        state.trainingCarbs = values;
+      }
+      saveSettings();
+    }
+
+    carbInputs.forEach(inp => inp.addEventListener('change', updateModeFromInputs));
+
+    ftpInput.addEventListener('change', saveSettings);
+
+    // ----- UNIT TOGGLE -----
     unitToggle.addEventListener('click', () => {
       state.useMmol = !state.useMmol;
       unitToggle.textContent = state.useMmol ? 'mmol/L' : 'mg/dL';
+      unitToggle.classList.toggle('active', state.useMmol);
       saveSettings();
       render();
+    });
+
+    // ----- MODE TOGGLE -----
+    function setMode(mode) {
+      state.mode = mode;
+      updateModeButtons();
+      applyModeToInputs();
+      saveSettings();
+      render();
+    }
+
+    function updateModeButtons() {
+      if (state.mode === 'training') {
+        modeTrainingBtn.classList.add('active');
+        modeRaceBtn.classList.remove('active');
+      } else {
+        modeTrainingBtn.classList.remove('active');
+        modeRaceBtn.classList.add('active');
+      }
+    }
+
+    modeTrainingBtn.addEventListener('click', () => setMode('training'));
+    modeRaceBtn.addEventListener('click', () => setMode('race'));
+
+    // ----- SETTINGS PANEL -----
+    settingsToggle.addEventListener('click', () => {
+      settingsPanel.classList.toggle('open');
     });
 
     // ----- ZONES -----
@@ -268,9 +488,9 @@
 
     // ----- NIGHTSCOUT FETCH -----
     async function fetchNightscout() {
-      const base = nsUrlInput.value.trim();
+      const base = NS_URL;
       if (!base) {
-        statusLine.textContent = 'Set Nightscout URL above';
+        statusLine.textContent = 'Nightscout URL not set';
         return;
       }
       const url = base.replace(/\/+$/, '') + '/api/v1/entries.json?count=1';
@@ -278,11 +498,7 @@
       statusLine.textContent = 'Refreshing from Nightscout…';
 
       try {
-        const headers = {};
-        const sec = apiSecretInput.value.trim();
-        if (sec) headers['API-SECRET'] = sec;
-
-        const res = await fetch(url, { headers });
+        const res = await fetch(url);
         if (!res.ok) {
           statusLine.textContent = 'Nightscout error: ' + res.status;
           return;
@@ -303,7 +519,6 @@
           return;
         }
 
-        // Convert mg/dL -> mmol/L if requested
         let bgVal = sgv;
         if (state.useMmol) {
           bgVal = sgv / 18.0;
@@ -313,6 +528,7 @@
         state.lastDirection = direction;
         state.lastDateMs = typeof dateMs === 'number' ? dateMs : Date.parse(dateMs);
 
+        statusLine.textContent = 'Nightscout: OK';
         render();
       } catch (e) {
         console.log(e);
@@ -320,9 +536,44 @@
       }
     }
 
+    refreshBtn.addEventListener('click', fetchNightscout);
+
+    // ----- TIMING / FEED TIMER -----
+    logFeedBtn.addEventListener('click', () => {
+      state.lastFeedTime = Date.now();
+      render();
+    });
+
+    resetTimerBtn.addEventListener('click', () => {
+      state.lastFeedTime = null;
+      render();
+    });
+
+    function getFeedTimerText() {
+      if (!state.lastFeedTime) {
+        return 'No feed logged yet';
+      }
+      const diffMin = (Date.now() - state.lastFeedTime) / 60000;
+      const since = diffMin < 1 ? '<1 min ago' : diffMin.toFixed(1) + ' min ago';
+      const remaining = Math.max(0, 20 - diffMin);
+      const remText = remaining <= 0
+        ? 'Ready for next scheduled feed if plan calls for it'
+        : remaining.toFixed(1) + ' min until 20\' mark';
+      return `Last feed: ${since} • ${remText}`;
+    }
+
     // ----- FUELING LOGIC -----
-    function getCarbsPerZone() {
-      return carbInputs.map(inp => Number(inp.value) || 0);
+    function isFalling(dir) {
+      return dir === 'FortyFiveDown' || dir === 'SingleDown';
+    }
+    function isFallingFast(dir) {
+      return dir === 'DoubleDown';
+    }
+    function isRising(dir) {
+      return dir === 'FortyFiveUp' || dir === 'SingleUp';
+    }
+    function isRisingFast(dir) {
+      return dir === 'DoubleUp';
     }
 
     function getTrendSymbol(direction) {
@@ -338,21 +589,12 @@
       }
     }
 
-    function isFalling(dir) {
-      return dir === 'FortyFiveDown' || dir === 'SingleDown';
-    }
-    function isFallingFast(dir) {
-      return dir === 'DoubleDown';
-    }
-    function isRising(dir) {
-      return dir === 'FortyFiveUp' || dir === 'SingleUp';
-    }
-    function isRisingFast(dir) {
-      return dir === 'DoubleUp';
+    function getCarbsPerZone() {
+      return state.mode === 'race' ? state.raceCarbs : state.trainingCarbs;
     }
 
     function getFeedInstruction(bg, direction, zone, carbsZ, ageMin) {
-      if (bg == null || !zone) return '---';
+      if (bg == null || !zone) return 'Set zone to see plan';
 
       if (ageMin != null && ageMin > 10) {
         return 'Data old – check CGM';
@@ -361,24 +603,24 @@
       const dir = direction || '';
       const base = carbsZ[zone - 1] || 0;
 
-      // Safety wording: no specific low treatment – user follows their plan.
+      // Safety wording: no specific low treatment – follow your low plan.
       if (bg < 4.0) {
         return 'LOW – follow your low treatment plan';
       }
       if (bg >= 4.0 && bg < 5.0) {
-        if (isFallingFast(dir)) return 'Near low + falling fast – consider treating soon';
+        if (isFallingFast(dir)) return 'Near low + falling fast – may need treatment soon';
         if (isFalling(dir))     return 'Near low + falling – monitor closely';
-        return 'Edge of low – keep an eye on it';
+        return 'Near low – watch CGM';
       }
 
       // 5.0–6.0: cautious if falling
       if (bg >= 5.0 && bg < 6.0) {
         if (isFallingFast(dir)) {
-          return `${base}+10g/20' (plan)`;
+          return `${base}+10g/20' from your plan`;
         } else if (isFalling(dir)) {
-          return `${base}+5g/20' (plan)`;
+          return `${base}+5g/20' from your plan`;
         } else {
-          return `${base}g/20' (plan)`;
+          return `${base}g/20' from your plan`;
         }
       }
 
@@ -394,9 +636,9 @@
       // 8–10: often reduce carbs unless hard work + stable/falling
       if (bg > 8.0 && bg <= 10.0) {
         if (isRising(dir) || isRisingFast(dir)) {
-          return 'High-ish + rising – likely 0g, watch trend';
+          return 'High-ish + rising – usually 0g, watch trend';
         } else if (zone >= 4) {
-          return 'Hard work – maybe 5–10g/20\' if agreed in your plan';
+          return 'Hard work – maybe small carbs if agreed in your plan';
         } else {
           return 'Probably 0g right now';
         }
@@ -410,21 +652,37 @@
       return '---';
     }
 
+    function bgColor(bg) {
+      if (bg == null) return '#222';
+      if (bg < 4.0) return 'var(--low)';
+      if (bg < 5.0) return 'var(--near-low)';
+      if (bg >= 6.0 && bg <= 8.0) return 'var(--sweet)';
+      if (bg > 8.0) return 'var(--high)';
+      return '#222';
+    }
+
+    // ----- RENDER -----
     function render() {
       const bg = state.lastBg;
       const dir = state.lastDirection;
       const zone = state.currentZone;
       const carbsZ = getCarbsPerZone();
 
-      // BG line
+      // BG strip
       if (bg == null) {
-        bgLine.textContent = '--.--';
+        bgValue.textContent = '--.--';
+        bgSub.textContent = 'Waiting for CGM…';
+        bgStrip.style.background = '#222';
       } else {
+        const sym = getTrendSymbol(dir);
         if (state.useMmol) {
-          bgLine.textContent = bg.toFixed(1) + ' mmol/L ' + getTrendSymbol(dir);
+          bgValue.textContent = bg.toFixed(1) + ' ' + sym;
+          bgSub.textContent = 'mmol/L';
         } else {
-          bgLine.textContent = bg.toFixed(0) + ' mg/dL ' + getTrendSymbol(dir);
+          bgValue.textContent = bg.toFixed(0) + ' ' + sym;
+          bgSub.textContent = 'mg/dL';
         }
+        bgStrip.style.background = bgColor(bg);
       }
 
       // Zone line
@@ -434,7 +692,6 @@
         const ftp = Number(ftpInput.value) || null;
         let zoneTxt = 'Zone ' + zone;
         if (ftp) {
-          // Classic Coggan boundaries %FTP
           const pctRanges = [
             [0, 0.55],
             [0.55, 0.75],
@@ -449,35 +706,37 @@
             zoneTxt += ` (~${low}-${high}W)`;
           }
         }
-        zoneLine.textContent = zoneTxt;
+        zoneLine.textContent = zoneTxt + ` • ${state.mode === 'race' ? 'Race' : 'Training'} plan`;
       }
 
-      // Age / status line
-      if (state.lastDateMs) {
-        const ageMs = Date.now() - state.lastDateMs;
-        const ageMin = ageMs / 60000;
-        const ageStr = ageMin < 1 ? '<1 min ago' : ageMin.toFixed(1) + ' min ago';
-        statusLine.textContent = 'Last CGM: ' + ageStr;
-      } else {
-        statusLine.textContent = 'Waiting for CGM…';
-      }
-
-      // Fuel suggestion
+      // Age / feed suggestion
       let ageMin = null;
       if (state.lastDateMs) {
         ageMin = (Date.now() - state.lastDateMs) / 60000;
       }
-      const text = getFeedInstruction(bg, dir, zone, carbsZ, ageMin);
-      feedLine.textContent = text;
+
+      const feedText = getFeedInstruction(bg, dir, zone, carbsZ, ageMin);
+      feedMain.textContent = feedText;
+
+      if (state.lastDateMs) {
+        const ageMs = Date.now() - state.lastDateMs;
+        const age = ageMs / 60000;
+        const ageStr = age < 1 ? '<1 min ago' : age.toFixed(1) + ' min ago';
+        feedSub.textContent = 'Last CGM: ' + ageStr;
+      } else {
+        feedSub.textContent = '';
+      }
+
+      // Timer text
+      timerLine.textContent = getFeedTimerText();
     }
 
-    // Initial setup
+    // ----- INIT -----
     loadSettings();
     render();
-    // Poll Nightscout every 60 seconds
     fetchNightscout();
-    setInterval(fetchNightscout, 60000);
+    setInterval(fetchNightscout, 60000); // poll every minute
+    setInterval(render, 15000); // refresh timer text / age display every 15s
   </script>
 </body>
 </html>
-
