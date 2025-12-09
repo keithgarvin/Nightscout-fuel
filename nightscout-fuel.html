@@ -231,13 +231,13 @@
   </div>
 
   <!-- BG strip with color coding -->
-  <div id="bgStrip" class="bg-strip" style="background: #222;">
+  <div id="bgStrip" class="bg-strip" style="background:#222;">
     <div id="bgValue" class="bg-value">--.--</div>
     <div id="bgSub" class="bg-sub">Waiting for CGM…</div>
   </div>
 
   <!-- Main fueling summary -->
-   <div class="card">
+  <div class="card">
     <div id="feedMain" class="main-text">Set zone to begin</div>
     <div id="feedSub" class="sub-text"></div>
     <div id="projLine" class="sub-text"></div>
@@ -332,7 +332,9 @@
       lastBg: null,
       lastDirection: null,
       lastDateMs: null,
-      lastFeedTime: null
+      lastFeedTime: null,
+      projBg20_mg: null,     // projected BG in mg/dL ~20 minutes ahead
+      projLowMinutes: null   // minutes until crossing 4.0 mmol/L, if at all
     };
 
     // ----- ELEMENTS -----
@@ -342,6 +344,7 @@
 
     const feedMain = document.getElementById('feedMain');
     const feedSub = document.getElementById('feedSub');
+    const projLine = document.getElementById('projLine');
     const statusLine = document.getElementById('statusLine');
     const zoneLine = document.getElementById('zoneLine');
     const timerLine = document.getElementById('timerLine');
@@ -384,7 +387,6 @@
           state.mode = saved.mode;
         }
 
-        // Carb plans per mode
         state.trainingCarbs = Array.isArray(saved.trainingCarbs) && saved.trainingCarbs.length === 5
           ? saved.trainingCarbs
           : DEFAULT_TRAINING.slice();
@@ -397,7 +399,6 @@
         state.raceCarbs = DEFAULT_RACE.slice();
       }
 
-      // Initialize inputs based on mode
       applyModeToInputs();
       updateModeButtons();
     }
@@ -431,7 +432,6 @@
     }
 
     carbInputs.forEach(inp => inp.addEventListener('change', updateModeFromInputs));
-
     ftpInput.addEventListener('change', saveSettings);
 
     // ----- UNIT TOGGLE -----
@@ -494,7 +494,7 @@
         statusLine.textContent = 'Nightscout URL not set';
         return;
       }
-      const url = base.replace(/\/+$/, '') + '/api/v1/entries.json?count=1';
+      const url = base.replace(/\/+$/, '') + '/api/v1/entries.json?count=4';
 
       statusLine.textContent = 'Refreshing from Nightscout…';
 
@@ -529,6 +529,9 @@
         state.lastDirection = direction;
         state.lastDateMs = typeof dateMs === 'number' ? dateMs : Date.parse(dateMs);
 
+        // compute projection from recent entries
+        computeProjection(data);
+
         statusLine.textContent = 'Nightscout: OK';
         render();
       } catch (e) {
@@ -561,6 +564,57 @@
         ? 'Ready for next scheduled feed if plan calls for it'
         : remaining.toFixed(1) + ' min until 20\' mark';
       return `Last feed: ${since} • ${remText}`;
+    }
+
+    // ----- PROJECTION LOGIC -----
+    function computeProjection(entries) {
+      state.projBg20_mg = null;
+      state.projLowMinutes = null;
+
+      if (!Array.isArray(entries) || entries.length < 2) {
+        return;
+      }
+
+      const sorted = entries.slice().sort((a, b) => {
+        const ta = a.date || Date.parse(a.dateString);
+        const tb = b.date || Date.parse(b.dateString);
+        return tb - ta; // newest first
+      });
+
+      const newest = sorted[0];
+      const oldest = sorted[sorted.length - 1];
+
+      const sgvNew = Number(newest.sgv);
+      const sgvOld = Number(oldest.sgv);
+      const tNew = newest.date || Date.parse(newest.dateString);
+      const tOld = oldest.date || Date.parse(oldest.dateString);
+
+      if (!Number.isFinite(sgvNew) || !Number.isFinite(sgvOld) || !tNew || !tOld) {
+        return;
+      }
+
+      const dtMin = (tNew - tOld) / 60000;
+      if (dtMin <= 0.5) {
+        return;
+      }
+
+      const slopeMgPerMin = (sgvNew - sgvOld) / dtMin;
+
+      const horizonMin = 20;
+      const projMg = sgvNew + slopeMgPerMin * horizonMin;
+      state.projBg20_mg = projMg;
+
+      const lowMg = 4.0 * 18.0;
+      if (slopeMgPerMin < -0.1) {
+        const minutesToLow = (lowMg - sgvNew) / slopeMgPerMin; // slope < 0 → positive if crossing
+        if (minutesToLow > 0 && minutesToLow < 90) {
+          state.projLowMinutes = minutesToLow;
+        } else {
+          state.projLowMinutes = null;
+        }
+      } else {
+        state.projLowMinutes = null;
+      }
     }
 
     // ----- FUELING LOGIC -----
@@ -604,7 +658,6 @@
       const dir = direction || '';
       const base = carbsZ[zone - 1] || 0;
 
-      // Safety wording: no specific low treatment – follow your low plan.
       if (bg < 4.0) {
         return 'LOW – follow your low treatment plan';
       }
@@ -614,7 +667,6 @@
         return 'Near low – watch CGM';
       }
 
-      // 5.0–6.0: cautious if falling
       if (bg >= 5.0 && bg < 6.0) {
         if (isFallingFast(dir)) {
           return `${base}+10g/20' from your plan`;
@@ -625,7 +677,6 @@
         }
       }
 
-      // 6–8: sweet spot; use planned carbs unless shooting up
       if (bg >= 6.0 && bg <= 8.0) {
         if (isRisingFast(dir)) {
           const trimmed = Math.max(0, base - 5);
@@ -634,7 +685,6 @@
         return `${base}g/20' (plan)`;
       }
 
-      // 8–10: often reduce carbs unless hard work + stable/falling
       if (bg > 8.0 && bg <= 10.0) {
         if (isRising(dir) || isRisingFast(dir)) {
           return 'High-ish + rising – usually 0g, watch trend';
@@ -645,7 +695,6 @@
         }
       }
 
-      // >10: usually no carbs
       if (bg > 10.0) {
         return 'High – usually no carbs; follow your plan';
       }
@@ -710,23 +759,43 @@
         zoneLine.textContent = zoneTxt + ` • ${state.mode === 'race' ? 'Race' : 'Training'} plan`;
       }
 
-      // Age / feed suggestion
+      // CGM age
       let ageMin = null;
       if (state.lastDateMs) {
-        ageMin = (Date.now() - state.lastDateMs) / 60000;
-      }
-
-      const feedText = getFeedInstruction(bg, dir, zone, carbsZ, ageMin);
-      feedMain.textContent = feedText;
-
-      if (state.lastDateMs) {
         const ageMs = Date.now() - state.lastDateMs;
-        const age = ageMs / 60000;
-        const ageStr = age < 1 ? '<1 min ago' : age.toFixed(1) + ' min ago';
+        ageMin = ageMs / 60000;
+        const ageStr = ageMin < 1 ? '<1 min ago' : ageMin.toFixed(1) + ' min ago';
         feedSub.textContent = 'Last CGM: ' + ageStr;
       } else {
         feedSub.textContent = '';
       }
+
+      // Feed suggestion
+      const feedText = getFeedInstruction(bg, dir, zone, carbsZ, ageMin);
+      feedMain.textContent = feedText;
+
+      // Projection line
+      let projTxt = '';
+      if (state.projBg20_mg != null && state.lastBg != null) {
+        const projVal = state.useMmol
+          ? state.projBg20_mg / 18.0
+          : state.projBg20_mg;
+
+        const projStr = state.useMmol
+          ? projVal.toFixed(1) + ' mmol/L'
+          : projVal.toFixed(0) + ' mg/dL';
+
+        projTxt = `Proj ~20': ${projStr}`;
+
+        if (state.projLowMinutes != null && state.projLowMinutes > 0) {
+          const mins = state.projLowMinutes;
+          const minsStr = mins < 1 ? '<1 min' : mins.toFixed(0) + ' min';
+          projTxt += ` • Possible <4 in ~${minsStr} if trend continues (for awareness only)`;
+        }
+      } else {
+        projTxt = '';
+      }
+      projLine.textContent = projTxt;
 
       // Timer text
       timerLine.textContent = getFeedTimerText();
@@ -737,8 +806,7 @@
     render();
     fetchNightscout();
     setInterval(fetchNightscout, 60000); // poll every minute
-    setInterval(render, 15000); // refresh timer text / age display every 15s
+    setInterval(render, 15000);          // keep timer/projection display fresh
   </script>
 </body>
 </html>
-
