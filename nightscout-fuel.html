@@ -353,11 +353,19 @@
     // ----- CONSTANTS -----
     const NS_URL = "https://keithgarvin.us.nightscoutpro.com";
     const FUEL_INTERVAL_MIN = 20;
-    const LOW_INTERVAL_MIN = 15; // your 15-minute wait
+const LOW_INTERVAL_MIN = 15; // your 15-minute wait
 
-    const DEFAULT_TRAINING = [10, 15, 20, 25, 30];
-    const DEFAULT_RACE     = [15, 20, 25, 30, 35];
+// Base carb targets in g/hour by zone (Z1–Z5), based on physiology
+const TRAINING_G_PER_HR = [30, 45, 60, 75, 90];
+const RACE_G_PER_HR     = [45, 60, 75, 90, 105];
 
+// Convert g/hr to g per fueling interval (20 min)
+function computeDefaultCarbsFromHr(arrGPerHr) {
+  return arrGPerHr.map(v => Math.round(v * (FUEL_INTERVAL_MIN / 60)));
+}
+
+const DEFAULT_TRAINING = computeDefaultCarbsFromHr(TRAINING_G_PER_HR);
+const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
     // ----- STATE -----
     let state = {
       useMmol: true,
@@ -864,6 +872,7 @@
   </script>
 </body>
 </html>
+
 
 
 
