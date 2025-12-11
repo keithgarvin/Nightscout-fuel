@@ -712,68 +712,88 @@ const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
       return state.mode === 'race' ? state.raceCarbs : state.trainingCarbs;
     }
 
-    function getFuelInstruction(bgMmol, direction, zone, carbsZ, ageMin) {
-      const dir = direction || '';
+    function getFuelInstruction(bgMmol, direction, zone, carbsZ, ageMin, remainingMin) {
+  const dir = direction || '';
 
-      // Low protocol
-      if (state.lowActive && bgMmol != null && bgMmol < 4.0) {
-        return 'Stop cycling and dose 15 g fast carbs. Wait 15 minutes and re-dose if necessary.';
-      }
-
-      // Recovery message after a low
-      if (!state.lowActive && state.lowRecoveredRecently && bgMmol != null && bgMmol >= 4.0) {
-        return 'BG recovered — resume cycling and fueling.';
-      }
-
-      if (bgMmol == null || !zone) return 'Set zone to see fueling';
-
-      if (ageMin != null && ageMin > 10) {
-        return 'Data old — check CGM';
-      }
-
-      const base = carbsZ[zone - 1] || 0;
-      const baseStr = `${base} g per ${FUEL_INTERVAL_MIN} min`;
-
-      // 4.0–6.0
-      if (bgMmol >= 4.0 && bgMmol < 6.0) {
-        if (isFallingFast(dir)) {
-          const extra = base + 10;
-          return `Fuel: ${extra} g per ${FUEL_INTERVAL_MIN} min (falling fast)`;
-        } else if (isFalling(dir)) {
-          const extra = base + 5;
-          return `Fuel: ${extra} g per ${FUEL_INTERVAL_MIN} min (falling)`;
-        } else {
-          return `Fuel: ${baseStr} (stable)`;
-        }
-      }
-
-      // 6.0–8.0 (sweet spot)
-      if (bgMmol >= 6.0 && bgMmol <= 8.0) {
-        if (isRisingFast(dir)) {
-          const trimmed = Math.max(0, base - 5);
-          return `Fuel: ${trimmed} g per ${FUEL_INTERVAL_MIN} min (rising fast)`;
-        }
-        return `Fuel: ${baseStr}`;
-      }
-
-      // 8.0–10.0
-      if (bgMmol > 8.0 && bgMmol <= 10.0) {
-        if (isRising(dir) || isRisingFast(dir)) {
-          return 'Hold fuel (BG elevated, rising)';
-        } else if (zone >= 4) {
-          return `Fuel: ${baseStr} (high intensity)`;
-        } else {
-          return 'Hold fuel (BG elevated)';
-        }
-      }
-
-      // > 10.0
-      if (bgMmol > 10.0) {
-        return 'BG high — ride fueling suspended. Follow your plan.';
-      }
-
-      return '---';
+  // Helper: turn remainingMin into "now" / "in X min" / "this interval"
+  function formatWhen(remaining) {
+    if (remaining == null) {
+      return 'this interval';
     }
+    if (remaining <= 0) {
+      return 'now';
+    }
+    return `in ${remaining.toFixed(1)} min`;
+  }
+
+  // Low protocol
+  if (state.lowActive && bgMmol != null && bgMmol < 4.0) {
+    return 'Stop cycling and dose 15 g fast carbs. Wait 15 minutes and re-dose if necessary.';
+  }
+
+  // Recovery message after a low
+  if (!state.lowActive && state.lowRecoveredRecently && bgMmol != null && bgMmol >= 4.0) {
+    return 'BG recovered — resume cycling and fueling.';
+  }
+
+  if (bgMmol == null || !zone) return 'Set zone to see fueling';
+
+  if (ageMin != null && ageMin > 10) {
+    return 'Data old — check CGM';
+  }
+
+  const base = carbsZ[zone - 1] || 0;
+
+  // 4.0–6.0 mmol/L
+  if (bgMmol >= 4.0 && bgMmol < 6.0) {
+    let grams = base;
+    let tag = 'stable';
+
+    if (isFallingFast(dir)) {
+      grams = base + 10;
+      tag = 'falling fast';
+    } else if (isFalling(dir)) {
+      grams = base + 5;
+      tag = 'falling';
+    }
+
+    const when = formatWhen(remainingMin);
+    return `Fuel: ${grams} g ${when} (${tag})`;
+  }
+
+  // 6.0–8.0 mmol/L (sweet spot)
+  if (bgMmol >= 6.0 && bgMmol <= 8.0) {
+    let grams = base;
+    let tag = 'standard';
+
+    if (isRisingFast(dir)) {
+      grams = Math.max(0, base - 5);
+      tag = 'rising fast';
+    }
+
+    const when = formatWhen(remainingMin);
+    return `Fuel: ${grams} g ${when} (${tag})`;
+  }
+
+  // 8.0–10.0 mmol/L
+  if (bgMmol > 8.0 && bgMmol <= 10.0) {
+    if (isRising(dir) || isRisingFast(dir)) {
+      return 'Hold fuel (BG elevated, rising)';
+    } else if (zone >= 4) {
+      const when = formatWhen(remainingMin);
+      return `Fuel: ${base} g ${when} (high intensity)`;
+    } else {
+      return 'Hold fuel (BG elevated)';
+    }
+  }
+
+  // > 10.0 mmol/L
+  if (bgMmol > 10.0) {
+    return 'BG high — ride fueling suspended. Follow your plan.';
+  }
+
+  return '---';
+}
 
     function bgStoplightColor(bgMmol) {
       if (bgMmol == null) return 'var(--neutral)';
@@ -845,8 +865,15 @@ const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
         feedSub.textContent = '';
       }
 
+    // --- NEW: compute remaining time until next fuel ---
+let remainingMin = null;
+if (!state.lowActive && state.lastFeedTime) {
+  const diffMin = (Date.now() - state.lastFeedTime) / 60000;
+  remainingMin = FUEL_INTERVAL_MIN - diffMin;
+}
+// ----------------------------------------------
       // Fuel instruction
-      const fuelText = getFuelInstruction(bgMmol, dir, zone, carbsZ, ageMin);
+      const fuelText = getFuelInstruction(bgMmol, dir, zone, carbsZ, ageMin, remainingMin);
       feedMain.textContent = fuelText;
 
       // Projection line (neutral info only)
@@ -872,6 +899,7 @@ const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
   </script>
 </body>
 </html>
+
 
 
 
