@@ -717,39 +717,36 @@ if (state.lowActive && state.lowStartTime) {
     }
 
     // ----- FUELING / LOW STATE -----
-    function updateLowState(bgMmol) {
-      const now = Date.now();
-      if (bgMmol == null) return;
+  function updateLowState(bgMmol) {
+  const now = Date.now();
+  if (bgMmol == null) return;
 
-      if (bgMmol < 4.0) {
-  if (!state.lowActive) {
-    state.lowActive = true;
-    state.lowStartTime = now;
-    state.lowRecoveredRecently = false;
-    state.lowRecoverTime = null;
+  if (bgMmol < 4.0) {
+    if (!state.lowActive) {
+      state.lowActive = true;
+      state.lowStartTime = now;
+      state.lowRecoveredRecently = false;
+      state.lowRecoverTime = null;
 
-    beepOnce();         // immediate low alert
-    lastLowAlarmMs = 0; // arm the re-check alarm
-  }
-}
+      beepOnce();         // immediate low alert
+      lastLowAlarmMs = 0; // arm the re-check alarm
+    }
+  } else {
+    if (state.lowActive) {
+      state.lowActive = false;
+      lastLowAlarmMs = 0; // reset
+      state.lowRecoveredRecently = true;
+      state.lowRecoverTime = now;
+    }
 
-      } else {
-        if (state.lowActive) {
-  state.lowActive = false;
-  lastLowAlarmMs = 0; // reset
-  state.lowRecoveredRecently = true;
-  state.lowRecoverTime = now;
-}
-
-        if (state.lowRecoveredRecently && state.lowRecoverTime) {
-          const sinceRecoverMin = (now - state.lowRecoverTime) / 60000;
-          // after 5 minutes, stop showing "recovered" and go back to normal wording
-          if (sinceRecoverMin > 5) {
-            state.lowRecoveredRecently = false;
-          }
-        }
+    if (state.lowRecoveredRecently && state.lowRecoverTime) {
+      const sinceRecoverMin = (now - state.lowRecoverTime) / 60000;
+      if (sinceRecoverMin > 5) {
+        state.lowRecoveredRecently = false;
       }
     }
+  }
+}
 
     function isFalling(dir) {
       return dir === 'FortyFiveDown' || dir === 'SingleDown';
@@ -949,17 +946,6 @@ if (!state.lowActive && remainingMin != null) {
   }
 }
 
-      // ----- Fuel due alarm (single beep) -----
-if (!state.lowActive && remainingMin != null) {
-  if (remainingMin <= 0 && !fuelDueBeeped) {
-    beepOnce();
-    fuelDueBeeped = true;
-  }
-  // If you’re no longer due, re-arm for the next time you become due
-  if (remainingMin > 0) {
-    fuelDueBeeped = false;
-  }
-}
 
 // ----------------------------------------------
       // Fuel instruction
@@ -989,6 +975,7 @@ if (!state.lowActive && remainingMin != null) {
   </script>
 </body>
 </html>
+
 
 
 
