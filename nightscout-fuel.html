@@ -480,7 +480,8 @@ const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
     trainInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
     raceInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
     ftpInput.addEventListener('change', saveSettings);
-// ----- ALARMS (single beep) -----
+
+    // ----- ALARMS (single beep) -----
 // iOS requires a user gesture before audio can play.
 let audioReady = false;
 let audioCtx = null;
@@ -619,29 +620,38 @@ function beepOnce() {
     refreshBtn.addEventListener('click', fetchNightscout);
 
     // ----- TIMING / FEED TIMER -----
-    logFeedBtn.addEventListener('click', () => {
-      state.lastFeedTime = Date.now();
-      render();
-    });
+  logFeedBtn.addEventListener('click', () => {
+  state.lastFeedTime = Date.now();
+  fuelDueBeeped = false; // reset fuel alarm for the next interval
+  render();
+});
 
-    resetTimerBtn.addEventListener('click', () => {
-      state.lastFeedTime = null;
-      render();
-    });
+resetTimerBtn.addEventListener('click', () => {
+  state.lastFeedTime = null;
+  fuelDueBeeped = false; // reset
+  render();
+});
+
 
     function getFeedTimerText() {
       const now = Date.now();
 
-      // Low protocol timer overrides fueling timer
-      if (state.lowActive && state.lowStartTime) {
-        const diffMin = (now - state.lowStartTime) / 60000;
-        const remaining = LOW_INTERVAL_MIN - diffMin;
-        if (remaining > 0) {
-          return `Low protocol active • Re-check in: ${remaining.toFixed(1)} min`;
-        } else {
-          return 'Low protocol: re-check window active.';
-        }
-      }
+   if (state.lowActive && state.lowStartTime) {
+  const diffMin = (now - state.lowStartTime) / 60000;
+  const remaining = LOW_INTERVAL_MIN - diffMin;
+
+  if (remaining > 0) {
+    lowDueBeeped = false; // still counting down, keep it armed
+    return `Low protocol active • Re-check in: ${remaining.toFixed(1)} min`;
+  } else {
+    if (!lowDueBeeped) {
+      beepOnce();
+      lowDueBeeped = true;
+    }
+    return 'Low protocol: re-check window active.';
+  }
+}
+
 
       if (!state.lastFeedTime) {
         return 'No feed logged yet';
@@ -905,6 +915,18 @@ if (!state.lowActive && state.lastFeedTime) {
   const diffMin = (Date.now() - state.lastFeedTime) / 60000;
   remainingMin = FUEL_INTERVAL_MIN - diffMin;
 }
+      // ----- Fuel due alarm (single beep) -----
+if (!state.lowActive && remainingMin != null) {
+  if (remainingMin <= 0 && !fuelDueBeeped) {
+    beepOnce();
+    fuelDueBeeped = true;
+  }
+  // If you’re no longer due, re-arm for the next time you become due
+  if (remainingMin > 0) {
+    fuelDueBeeped = false;
+  }
+}
+
 // ----------------------------------------------
       // Fuel instruction
       const fuelText = getFuelInstruction(bgMmol, dir, zone, carbsZ, ageMin, remainingMin);
@@ -933,6 +955,7 @@ if (!state.lowActive && state.lastFeedTime) {
   </script>
 </body>
 </html>
+
 
 
 
