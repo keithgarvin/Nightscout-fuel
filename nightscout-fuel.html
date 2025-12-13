@@ -481,13 +481,15 @@ const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
     raceInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
     ftpInput.addEventListener('change', saveSettings);
 
-    // ----- ALARMS (single beep) -----
-// iOS requires a user gesture before audio can play.
+ // ----- ALARMS -----
 let audioReady = false;
 let audioCtx = null;
 
-let fuelDueBeeped = false;   // prevents repeated beeps while overdue
-let lowDueBeeped = false;    // prevents repeated beeps at end of low timer
+let lastFuelAlarmMs = 0;
+let lastLowAlarmMs = 0;
+
+const FUEL_ALARM_REPEAT_SEC = 30;
+const LOW_ALARM_REPEAT_SEC  = 30;
 
 function initAudioOnce() {
   if (audioReady) return;
@@ -495,25 +497,42 @@ function initAudioOnce() {
   audioReady = true;
 }
 
-// Unlock audio on first user interaction
+// Unlock audio on first user interaction (iOS requirement)
 document.addEventListener('click', initAudioOnce, { once: true });
 
+// Loud(er) beep
 function beepOnce() {
   if (!audioReady || !audioCtx) return;
 
+  const now = audioCtx.currentTime;
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
-  o.type = 'sine';
-  o.frequency.value = 880;   // tone
-  g.gain.value = 0.08;       // volume
+
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+  o.type = 'square';
+  o.frequency.setValueAtTime(1100, now);
+  o.frequency.setValueAtTime(900,  now + 0.18);
+  o.frequency.setValueAtTime(1200, now + 0.30);
+
   o.connect(g);
   g.connect(audioCtx.destination);
 
-  o.start();
-  setTimeout(() => o.stop(), 250);
+  o.start(now);
+  o.stop(now + 0.45);
 
-  // Optional vibration if supported
-  if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
+  if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 220]);
+}
+
+function maybeBeep(lastMs, repeatSec) {
+  const now = Date.now();
+  if (now - lastMs >= repeatSec * 1000) {
+    beepOnce();
+    return now;
+  }
+  return lastMs;
 }
 
     // ----- UNIT TOGGLE -----
@@ -620,37 +639,36 @@ function beepOnce() {
     refreshBtn.addEventListener('click', fetchNightscout);
 
     // ----- TIMING / FEED TIMER -----
-  logFeedBtn.addEventListener('click', () => {
+logFeedBtn.addEventListener('click', () => {
   state.lastFeedTime = Date.now();
-  fuelDueBeeped = false; // reset fuel alarm for the next interval
+  lastFuelAlarmMs = 0; // stop/clear fuel alarm
   render();
 });
 
 resetTimerBtn.addEventListener('click', () => {
   state.lastFeedTime = null;
-  fuelDueBeeped = false; // reset
+  lastFuelAlarmMs = 0; // stop/clear fuel alarm
   render();
 });
+
 
 
     function getFeedTimerText() {
       const now = Date.now();
 
-   if (state.lowActive && state.lowStartTime) {
+if (state.lowActive && state.lowStartTime) {
   const diffMin = (now - state.lowStartTime) / 60000;
   const remaining = LOW_INTERVAL_MIN - diffMin;
 
   if (remaining > 0) {
-    lowDueBeeped = false; // still counting down, keep it armed
+    lastLowAlarmMs = 0; // counting down
     return `Low protocol active • Re-check in: ${remaining.toFixed(1)} min`;
   } else {
-    if (!lowDueBeeped) {
-      beepOnce();
-      lowDueBeeped = true;
-    }
+    lastLowAlarmMs = maybeBeep(lastLowAlarmMs, LOW_ALARM_REPEAT_SEC);
     return 'Low protocol: re-check window active.';
   }
 }
+
 
 
       if (!state.lastFeedTime) {
@@ -704,18 +722,25 @@ resetTimerBtn.addEventListener('click', () => {
       if (bgMmol == null) return;
 
       if (bgMmol < 4.0) {
-        if (!state.lowActive) {
-          state.lowActive = true;
-          state.lowStartTime = now;
-          state.lowRecoveredRecently = false;
-          state.lowRecoverTime = null;
-        }
+  if (!state.lowActive) {
+    state.lowActive = true;
+    state.lowStartTime = now;
+    state.lowRecoveredRecently = false;
+    state.lowRecoverTime = null;
+
+    beepOnce();         // immediate low alert
+    lastLowAlarmMs = 0; // arm the re-check alarm
+  }
+}
+
       } else {
         if (state.lowActive) {
-          state.lowActive = false;
-          state.lowRecoveredRecently = true;
-          state.lowRecoverTime = now;
-        }
+  state.lowActive = false;
+  lastLowAlarmMs = 0; // reset
+  state.lowRecoveredRecently = true;
+  state.lowRecoverTime = now;
+}
+
         if (state.lowRecoveredRecently && state.lowRecoverTime) {
           const sinceRecoverMin = (now - state.lowRecoverTime) / 60000;
           // after 5 minutes, stop showing "recovered" and go back to normal wording
@@ -915,6 +940,15 @@ if (!state.lowActive && state.lastFeedTime) {
   const diffMin = (Date.now() - state.lastFeedTime) / 60000;
   remainingMin = FUEL_INTERVAL_MIN - diffMin;
 }
+      // ----- Fuel needed alarm (repeat every 30s while overdue) -----
+if (!state.lowActive && remainingMin != null) {
+  if (remainingMin <= 0) {
+    lastFuelAlarmMs = maybeBeep(lastFuelAlarmMs, FUEL_ALARM_REPEAT_SEC);
+  } else {
+    lastFuelAlarmMs = 0; // re-arm
+  }
+}
+
       // ----- Fuel due alarm (single beep) -----
 if (!state.lowActive && remainingMin != null) {
   if (remainingMin <= 0 && !fuelDueBeeped) {
@@ -955,6 +989,7 @@ if (!state.lowActive && remainingMin != null) {
   </script>
 </body>
 </html>
+
 
 
 
