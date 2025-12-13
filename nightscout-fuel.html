@@ -480,6 +480,40 @@ const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
     trainInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
     raceInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
     ftpInput.addEventListener('change', saveSettings);
+// ----- ALARMS (single beep) -----
+// iOS requires a user gesture before audio can play.
+let audioReady = false;
+let audioCtx = null;
+
+let fuelDueBeeped = false;   // prevents repeated beeps while overdue
+let lowDueBeeped = false;    // prevents repeated beeps at end of low timer
+
+function initAudioOnce() {
+  if (audioReady) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioReady = true;
+}
+
+// Unlock audio on first user interaction
+document.addEventListener('click', initAudioOnce, { once: true });
+
+function beepOnce() {
+  if (!audioReady || !audioCtx) return;
+
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'sine';
+  o.frequency.value = 880;   // tone
+  g.gain.value = 0.08;       // volume
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  o.start();
+  setTimeout(() => o.stop(), 250);
+
+  // Optional vibration if supported
+  if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
+}
 
     // ----- UNIT TOGGLE -----
     unitToggle.addEventListener('click', () => {
@@ -899,6 +933,7 @@ if (!state.lowActive && state.lastFeedTime) {
   </script>
 </body>
 </html>
+
 
 
 
