@@ -228,9 +228,22 @@
       opacity: 0.75;
       margin-top: 0.2rem;
     }
+    #flashOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+#flashOverlay.on {
+  opacity: 1;
+}
   </style>
 </head>
 <body>
+  <div id="flashOverlay" aria-hidden="true"></div>
   <div class="top-bar">
     <button class="icon-btn" id="refreshBtn">⭮</button>
     <h1>Fuel Helper</h1>
@@ -352,7 +365,7 @@
   <script>
     // ----- CONSTANTS -----
     const NS_URL = "https://keithgarvin.us.nightscoutpro.com";
-    const FUEL_INTERVAL_MIN = 20;
+    const FUEL_INTERVAL_MIN = .20;
 const LOW_INTERVAL_MIN = 15; // your 15-minute wait
 
 // Base carb targets in g/hour by zone (Z1–Z5), based on physiology
@@ -502,8 +515,11 @@ document.addEventListener('click', initAudioOnce, { once: true });
 
 // Loud(er) beep
 function beepOnce() {
-  if (!audioReady || !audioCtx) return;
+  tripleFlash(); // 🔥 visual alert (3 white flashes)
 
+  if (!audioReady || !audioCtx) return;
+  ...
+}
   const now = audioCtx.currentTime;
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
@@ -525,7 +541,20 @@ function beepOnce() {
 
   if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 220]);
 }
+const flashOverlay = document.getElementById('flashOverlay');
 
+function tripleFlash() {
+  if (!flashOverlay) return;
+
+  const flashes = [0, 180, 360]; // ms timing for 3 flashes
+
+  flashes.forEach(delay => {
+    setTimeout(() => {
+      flashOverlay.classList.add('on');
+      setTimeout(() => flashOverlay.classList.remove('on'), 90);
+    }, delay);
+  });
+}
 function maybeBeep(lastMs, repeatSec) {
   const now = Date.now();
   if (now - lastMs >= repeatSec * 1000) {
@@ -975,6 +1004,7 @@ if (!state.lowActive && remainingMin != null) {
   </script>
 </body>
 </html>
+
 
 
 
