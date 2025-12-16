@@ -494,75 +494,7 @@ const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
     raceInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
     ftpInput.addEventListener('change', saveSettings);
 
- // ----- ALARMS -----
-let audioReady = false;
-let audioCtx = null;
-
-let lastFuelAlarmMs = 0;
-let lastLowAlarmMs = 0;
-
-const FUEL_ALARM_REPEAT_SEC = 30;
-const LOW_ALARM_REPEAT_SEC  = 30;
-
-function initAudioOnce() {
-  if (audioReady) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioReady = true;
-}
-
-// Unlock audio on first user interaction (iOS requirement)
-document.addEventListener('click', initAudioOnce, { once: true });
-
-// Loud(er) beep
-function beepOnce() {
-  tripleFlash(); // 🔥 visual alert (3 white flashes)
-
-  if (!audioReady || !audioCtx) return;
-  ...
-}
-  const now = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-
-  g.gain.setValueAtTime(0.0001, now);
-  g.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
-
-  o.type = 'square';
-  o.frequency.setValueAtTime(1100, now);
-  o.frequency.setValueAtTime(900,  now + 0.18);
-  o.frequency.setValueAtTime(1200, now + 0.30);
-
-  o.connect(g);
-  g.connect(audioCtx.destination);
-
-  o.start(now);
-  o.stop(now + 0.45);
-
-  if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 220]);
-}
-const flashOverlay = document.getElementById('flashOverlay');
-
-function tripleFlash() {
-  if (!flashOverlay) return;
-
-  const flashes = [0, 180, 360]; // ms timing for 3 flashes
-
-  flashes.forEach(delay => {
-    setTimeout(() => {
-      flashOverlay.classList.add('on');
-      setTimeout(() => flashOverlay.classList.remove('on'), 90);
-    }, delay);
-  });
-}
-function maybeBeep(lastMs, repeatSec) {
-  const now = Date.now();
-  if (now - lastMs >= repeatSec * 1000) {
-    beepOnce();
-    return now;
-  }
-  return lastMs;
-}
+ 
 
     // ----- UNIT TOGGLE -----
     unitToggle.addEventListener('click', () => {
@@ -1004,6 +936,7 @@ if (!state.lowActive && remainingMin != null) {
   </script>
 </body>
 </html>
+
 
 
 
