@@ -1,287 +1,907 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Fuel Helper</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <title>Fuel Helper</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg-main: #000000;
+      --card-bg: #ffffff;
+      --card-border: #333;
+      --text-main: #000000;
+      --accent: #0a84ff;
+      /* stoplight palette */
+      --red:    #fd0604;
+      --amber:  #f6c000;
+      --green:  #4af51a;
+      --neutral:#ffffff;
+    }
 
-<style>
-:root{
-  --bg-main:#000;
-  --card-bg:#fff;
-  --card-border:#333;
-  --text-main:#000;
-  --accent:#0a84ff;
-  --red:#fd0604;
-  --amber:#f6c000;
-  --green:#4af51a;
-  --neutral:#ffffff;
-}
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0.7rem;
+      background: var(--bg-main);
+      color: var(--text-main);
+    }
 
-body{
-  margin:0;
-  padding:0.7rem;
-  background:var(--bg-main);
-  font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
-  color:var(--text-main);
-}
+    h1 {
+      font-size: 1.1rem;
+      margin: 0;
+      text-align: center;
+    }
 
-h1{font-size:1.1rem;margin:0;text-align:center}
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      gap: 0.4rem;
+    }
 
-.top-bar{
-  display:flex;
-  align-items:center;
-  gap:.4rem;
-  margin-bottom:.5rem;
-}
-.top-bar h1{flex:1}
+    .top-bar h1 {
+      flex: 1;
+      text-align: center;
+    }
 
-.icon-btn{
-  width:2.1rem;height:2.1rem;
-  border:none;border-radius:999px;
-  background:#222;color:#ccc;
-  font-size:1.3rem;
-}
+    .icon-btn {
+      border: none;
+      border-radius: 999px;
+      background: #222;
+      color: #ccc;
+      width: 2.1rem;
+      height: 2.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      padding: 0;
+    }
 
-.card{
-  background:var(--card-bg);
-  border:1px solid var(--card-border);
-  border-radius:.7rem;
-  padding:.6rem;
-  margin-bottom:.45rem;
-}
+    .icon-btn:active {
+      background: #444;
+    }
 
-.bg-strip{
-  border-radius:.7rem;
-  padding:.6rem;
-  text-align:center;
-  margin-bottom:.5rem;
-}
+    .card {
+      border-radius: 0.7rem;
+      padding: 0.6rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      margin-bottom: 0.45rem;
+    }
 
-.bg-value{font-size:2.6rem;font-weight:800}
-.bg-sub{font-size:1.1rem;opacity:.85}
+    .bg-strip {
+      border-radius: 0.7rem;
+      padding: 0.6rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
 
-.main-text{font-size:1.6rem;font-weight:700;text-align:center}
-.sub-text{font-size:1.1rem;text-align:center;opacity:.8}
-.status-text{font-size:1.1rem;text-align:center;opacity:.7}
+    .bg-value {
+      font-size: 2.6rem;
+      font-weight: 800;
+      margin-bottom: 0.1rem;
+    }
 
-.zone-buttons{display:flex;gap:.3rem;margin-top:.4rem}
-.zone-btn{
-  flex:1;
-  padding:.45rem 0;
-  border:none;
-  border-radius:.55rem;
-  background:#222;
-  color:#ccc;
-  font-size:1rem;
-  font-weight:700;
-}
-.zone-btn.active{background:var(--accent);color:#fff}
+    .bg-sub {
+      font-size: 1.1rem;
+      opacity: 0.85;
+    }
 
-.timer-row{display:flex;gap:.4rem;margin-top:.3rem}
-.timer-row button{
-  flex:1;
-  padding:.4rem;
-  background:#222;
-  color:#eee;
-  border:none;
-  border-radius:.6rem;
-}
+    .main-text {
+      font-size: 1.6rem;
+      text-align: center;
+      margin: 0.2rem 0 0.1rem;
+      font-weight: 700;
+    }
 
-.settings-panel{max-height:0;overflow:hidden;transition:max-height .25s}
-.settings-panel.open{max-height:500px}
+    .sub-text {
+      text-align: center;
+      font-size: 1.1rem;
+      opacity: 0.8;
+      margin-bottom: 0.1rem;
+    }
 
-label{font-size:.75rem;opacity:.8}
-input{
-  width:100%;
-  padding:.35rem;
-  background:#222;
-  color:#eee;
-  border:none;
-  border-radius:.4rem;
-}
+    .status-text {
+      text-align: center;
+      font-size: 1.1rem;
+      opacity: 0.7;
+    }
 
-#flashOverlay{
-  position:fixed;
-  inset:0;
-  background:rgba(255,255,255,.9);
-  opacity:0;
-  pointer-events:none;
-  z-index:9999;
-}
-#flashOverlay.on{opacity:1}
-</style>
+    .row {
+      display: flex;
+      gap: 0.3rem;
+      align-items: center;
+    }
+
+    .row + .row {
+      margin-top: 0.25rem;
+    }
+
+    .row > div {
+      flex: 1;
+    }
+
+    label {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.35rem;
+      border-radius: 0.4rem;
+      border: none;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      background: #222;
+      color: #eee;
+    }
+
+    .mode-toggle {
+      display: flex;
+      border-radius: 999px;
+      background: #222;
+      padding: 0.12rem;
+      font-size: 0.85rem;
+    }
+
+    .mode-btn {
+      flex: 1;
+      border: none;
+      border-radius: 999px;
+      padding: 0.25rem 0.3rem;
+      background: transparent;
+      color: #aaa;
+    }
+
+    .mode-btn.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .zone-buttons {
+      display: flex;
+      gap: 0.3rem;
+      margin-top: 0.35rem;
+    }
+
+    .zone-btn {
+      flex: 1;
+      border: none;
+      border-radius: 0.55rem;
+      padding: 0.45rem 0;
+      background: #222;
+      color: #ccc;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .zone-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .tiny {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      margin-top: 0.15rem;
+      text-align: center;
+    }
+
+    .timer-row {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.3rem;
+    }
+
+    .timer-row button {
+      border: none;
+      border-radius: 0.60rem;
+      padding: 0.4rem;
+      background: #222;
+      color: #eee;
+      font-size: 0.9rem;
+      flex: 1;
+    }
+
+    .timer-row button:active {
+      background: #444;
+    }
+
+    .settings-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+    }
+
+    .settings-panel.open {
+      max-height: 500px;
+    }
+
+    .settings-caption {
+      font-size: 0.75rem;
+      opacity: 0.75;
+      margin-top: 0.2rem;
+    }
+
+    /* Flash overlay */
+    #flashOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.9);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    #flashOverlay.on { opacity: 1; }
+  </style>
 </head>
 
 <body>
-<div id="flashOverlay"></div>
+  <div id="flashOverlay" aria-hidden="true"></div>
 
-<div class="top-bar">
-  <button class="icon-btn" id="refreshBtn">⭮</button>
-  <h1>Fuel Helper</h1>
-  <button class="icon-btn" id="settingsToggle">⚙︎</button>
-</div>
-
-<div id="bgStrip" class="bg-strip" style="background:var(--neutral)">
-  <div id="bgValue" class="bg-value">--.--</div>
-  <div id="bgSub" class="bg-sub">Waiting for CGM…</div>
-</div>
-
-<div class="card">
-  <div id="feedMain" class="main-text">Set zone to begin</div>
-  <div id="feedSub" class="sub-text"></div>
-  <div id="projLine" class="sub-text"></div>
-  <div id="statusLine" class="status-text">Nightscout: idle</div>
-</div>
-
-<div class="card">
-  <div id="zoneLine" class="sub-text">Zone --</div>
-  <div class="zone-buttons">
-    <button class="zone-btn" data-zone="1">Z1</button>
-    <button class="zone-btn" data-zone="2">Z2</button>
-    <button class="zone-btn" data-zone="3">Z3</button>
-    <button class="zone-btn" data-zone="4">Z4</button>
-    <button class="zone-btn" data-zone="5">Z5</button>
+  <div class="top-bar">
+    <button class="icon-btn" id="refreshBtn">⭮</button>
+    <h1>Fuel Helper</h1>
+    <button class="icon-btn" id="settingsToggle">⚙︎</button>
   </div>
-  <div class="timer-row">
-    <button id="logFeedBtn">Log feed now</button>
-    <button id="resetTimerBtn">Reset timer</button>
+
+  <!-- BG strip with stoplight colours -->
+  <div id="bgStrip" class="bg-strip" style="background:var(--neutral);">
+    <div id="bgValue" class="bg-value">--.--</div>
+    <div id="bgSub" class="bg-sub">Waiting for CGM…</div>
   </div>
-  <div id="timerLine" class="sub-text">No feed logged yet</div>
-</div>
+
+  <!-- Main fueling summary -->
+  <div class="card">
+    <div id="feedMain" class="main-text">Set zone to begin</div>
+    <div id="feedSub" class="sub-text"></div>
+    <div id="projLine" class="sub-text"></div>
+    <div id="statusLine" class="status-text">Nightscout: idle</div>
+  </div>
+
+  <!-- Zone + timer card -->
+  <div class="card">
+    <div id="zoneLine" class="sub-text">Zone --</div>
+
+    <div class="zone-buttons">
+      <button class="zone-btn" data-zone="1">Z1</button>
+      <button class="zone-btn" data-zone="2">Z2</button>
+      <button class="zone-btn" data-zone="3">Z3</button>
+      <button class="zone-btn" data-zone="4">Z4</button>
+      <button class="zone-btn" data-zone="5">Z5</button>
+    </div>
+
+    <div class="timer-row">
+      <button id="logFeedBtn">Log feed now</button>
+      <button id="resetTimerBtn">Reset timer</button>
+    </div>
+    <div class="tiny" id="timerLine">No feed logged yet</div>
+  </div>
+
+  <!-- Slide-down settings -->
+  <div class="card settings-panel" id="settingsPanel">
+    <div class="row">
+      <div>
+        <label for="ftpInput">FTP (watts)</label>
+        <input id="ftpInput" type="number" inputmode="numeric" value="305" />
+      </div>
+      <div>
+        <label>BG units</label>
+        <button id="unitToggle" class="mode-btn active" style="width:100%; border-radius:0.4rem;">mmol/L</button>
+      </div>
+    </div>
+
+    <div style="margin-top:0.4rem;">
+      <label>Mode</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="training" id="modeTraining">Training</button>
+        <button class="mode-btn" data-mode="race" id="modeRace">Race</button>
+      </div>
+    </div>
+
+    <div style="margin-top:0.4rem;">
+      <label>Training carbs per 20 min (g)</label>
+      <div class="row">
+        <div><label for="trainZ1">Z1</label><input id="trainZ1" type="number" /></div>
+        <div><label for="trainZ2">Z2</label><input id="trainZ2" type="number" /></div>
+        <div><label for="trainZ3">Z3</label><input id="trainZ3" type="number" /></div>
+        <div><label for="trainZ4">Z4</label><input id="trainZ4" type="number" /></div>
+        <div><label for="trainZ5">Z5</label><input id="trainZ5" type="number" /></div>
+      </div>
+    </div>
+
+    <div style="margin-top:0.4rem;">
+      <label>Race carbs per 20 min (g)</label>
+      <div class="row">
+        <div><label for="raceZ1">Z1</label><input id="raceZ1" type="number" /></div>
+        <div><label for="raceZ2">Z2</label><input id="raceZ2" type="number" /></div>
+        <div><label for="raceZ3">Z3</label><input id="raceZ3" type="number" /></div>
+        <div><label for="raceZ4">Z4</label><input id="raceZ4" type="number" /></div>
+        <div><label for="raceZ5">Z5</label><input id="raceZ5" type="number" /></div>
+      </div>
+    </div>
+
+    <div class="settings-caption">
+      Defaults – Training (per 20'): 10, 15, 20, 25, 30 g (Z1–Z5).<br/>
+      Race: 15, 20, 25, 30, 35 g. Adjust here then close this panel.
+    </div>
+  </div>
 
 <script>
-/* ---------------- CONFIG ---------------- */
-const NS_URL="https://keithgarvin.us.nightscoutpro.com";
-const FUEL_INTERVAL_MIN=20;
-const LOW_INTERVAL_MIN=15;
+/* ===================== CONSTANTS ===================== */
+const NS_URL = "https://keithgarvin.us.nightscoutpro.com";
+const FUEL_INTERVAL_MIN = 20;    // 20 minutes
+const LOW_INTERVAL_MIN  = 15;    // wait 15 min then re-check
 
-/* ---------------- STATE ---------------- */
-let state={
-  zone:null,
-  bg:null,
-  dir:null,
-  lastFeed:null,
-  low:false,
-  lowStart:null
+// Targets expressed as g/hour (Z1–Z5). Converted to g per 20-min interval.
+const TRAINING_G_PER_HR = [30, 45, 60, 75, 90];
+const RACE_G_PER_HR     = [45, 60, 75, 90, 105];
+
+function computeDefaultCarbsFromHr(arrGPerHr) {
+  return arrGPerHr.map(v => Math.round(v * (FUEL_INTERVAL_MIN / 60)));
+}
+const DEFAULT_TRAINING = computeDefaultCarbsFromHr(TRAINING_G_PER_HR);
+const DEFAULT_RACE     = computeDefaultCarbsFromHr(RACE_G_PER_HR);
+
+/* ===================== STATE ===================== */
+let state = {
+  useMmol: true,
+  mode: "training",
+  currentZone: null,
+
+  lastBgMmol: null,
+  lastDirection: null,
+  lastDateMs: null,
+
+  lastFeedTime: null,
+
+  projBg20_mg: null,
+
+  lowActive: false,
+  lowStartTime: null,
+  lowRecoveredRecently: false,
+  lowRecoverTime: null,
+
+  trainingCarbs: DEFAULT_TRAINING.slice(),
+  raceCarbs: DEFAULT_RACE.slice()
 };
 
-/* ---------------- AUDIO + FLASH ---------------- */
-let audioCtx=null, audioReady=false;
-let lastFuelAlarm=0,lastLowAlarm=0;
-const flash=document.getElementById("flashOverlay");
+/* ===================== ELEMENTS ===================== */
+const bgStrip = document.getElementById('bgStrip');
+const bgValue = document.getElementById('bgValue');
+const bgSub   = document.getElementById('bgSub');
 
-document.addEventListener("click",()=>{
-  if(!audioReady){
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    audioReady=true;
+const feedMain   = document.getElementById('feedMain');
+const feedSub    = document.getElementById('feedSub');
+const projLine   = document.getElementById('projLine');
+const statusLine = document.getElementById('statusLine');
+const zoneLine   = document.getElementById('zoneLine');
+const timerLine  = document.getElementById('timerLine');
+
+const settingsPanel  = document.getElementById('settingsPanel');
+const settingsToggle = document.getElementById('settingsToggle');
+const refreshBtn     = document.getElementById('refreshBtn');
+
+const modeTrainingBtn = document.getElementById('modeTraining');
+const modeRaceBtn     = document.getElementById('modeRace');
+const unitToggle      = document.getElementById('unitToggle');
+const ftpInput        = document.getElementById('ftpInput');
+
+const trainInputs = [
+  document.getElementById('trainZ1'),
+  document.getElementById('trainZ2'),
+  document.getElementById('trainZ3'),
+  document.getElementById('trainZ4'),
+  document.getElementById('trainZ5')
+];
+const raceInputs = [
+  document.getElementById('raceZ1'),
+  document.getElementById('raceZ2'),
+  document.getElementById('raceZ3'),
+  document.getElementById('raceZ4'),
+  document.getElementById('raceZ5')
+];
+
+const zoneButtons  = Array.from(document.querySelectorAll('.zone-btn'));
+const logFeedBtn   = document.getElementById('logFeedBtn');
+const resetTimerBtn= document.getElementById('resetTimerBtn');
+
+/* ===================== SETTINGS STORAGE ===================== */
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('nsFuelSettingsV3') || '{}');
+
+    if (saved.ftp) ftpInput.value = saved.ftp;
+
+    if (typeof saved.useMmol === 'boolean') state.useMmol = saved.useMmol;
+    unitToggle.textContent = state.useMmol ? 'mmol/L' : 'mg/dL';
+    unitToggle.classList.toggle('active', state.useMmol);
+
+    if (saved.mode === 'race' || saved.mode === 'training') state.mode = saved.mode;
+
+    state.trainingCarbs = Array.isArray(saved.trainingCarbs) && saved.trainingCarbs.length === 5
+      ? saved.trainingCarbs : DEFAULT_TRAINING.slice();
+
+    state.raceCarbs = Array.isArray(saved.raceCarbs) && saved.raceCarbs.length === 5
+      ? saved.raceCarbs : DEFAULT_RACE.slice();
+  } catch (e) {
+    state.trainingCarbs = DEFAULT_TRAINING.slice();
+    state.raceCarbs = DEFAULT_RACE.slice();
   }
-},{once:true});
 
-function tripleFlash(){
-  [0,180,360].forEach(d=>{
-    setTimeout(()=>{
-      flash.classList.add("on");
-      setTimeout(()=>flash.classList.remove("on"),90);
-    },d);
+  state.trainingCarbs.forEach((v,i)=>{ if(trainInputs[i]) trainInputs[i].value=v; });
+  state.raceCarbs.forEach((v,i)=>{ if(raceInputs[i]) raceInputs[i].value=v; });
+
+  updateModeButtons();
+}
+
+function saveSettings() {
+  const settings = {
+    ftp: Number(ftpInput.value) || null,
+    useMmol: state.useMmol,
+    mode: state.mode,
+    trainingCarbs: state.trainingCarbs,
+    raceCarbs: state.raceCarbs
+  };
+  localStorage.setItem('nsFuelSettingsV3', JSON.stringify(settings));
+}
+
+function updateCarbArraysFromInputs() {
+  state.trainingCarbs = trainInputs.map(inp => Number(inp.value) || 0);
+  state.raceCarbs     = raceInputs.map(inp => Number(inp.value) || 0);
+  saveSettings();
+  render();
+}
+
+trainInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
+raceInputs.forEach(inp  => inp.addEventListener('change', updateCarbArraysFromInputs));
+ftpInput.addEventListener('change', saveSettings);
+
+/* ===================== ALARMS + TRIPLE FLASH ===================== */
+let audioReady = false;
+let audioCtx = null;
+
+let lastFuelAlarmMs = 0;
+let lastLowAlarmMs  = 0;
+
+const FUEL_ALARM_REPEAT_SEC = 30;
+const LOW_ALARM_REPEAT_SEC  = 30;
+
+const flashOverlay = document.getElementById('flashOverlay');
+
+function tripleFlash() {
+  if (!flashOverlay) return;
+  const flashes = [0, 180, 360];
+  flashes.forEach(delay => {
+    setTimeout(() => {
+      flashOverlay.classList.add('on');
+      setTimeout(() => flashOverlay.classList.remove('on'), 90);
+    }, delay);
   });
 }
 
-function beep(){
-  tripleFlash();
-  if(!audioReady) return;
-  const t=audioCtx.currentTime;
-  const o=audioCtx.createOscillator();
-  const g=audioCtx.createGain();
-  o.type="square";
-  o.frequency.setValueAtTime(1100,t);
-  g.gain.setValueAtTime(.0001,t);
-  g.gain.exponentialRampToValueAtTime(.4,t+.02);
-  g.gain.exponentialRampToValueAtTime(.0001,t+.45);
-  o.connect(g);g.connect(audioCtx.destination);
-  o.start();o.stop(t+.45);
+function initAudioOnce() {
+  if (audioReady) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioReady = true;
 }
 
-/* ---------------- UI ---------------- */
-document.querySelectorAll(".zone-btn").forEach(b=>{
-  b.onclick=()=>{
-    state.zone=+b.dataset.zone;
-    document.querySelectorAll(".zone-btn").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
-    render();
-  };
+// iOS: needs a user gesture to enable audio
+document.addEventListener('click', initAudioOnce, { once: true });
+
+function beepOnce() {
+  // Flash even if audio is locked
+  tripleFlash();
+
+  if (!audioReady || !audioCtx) return;
+
+  const now = audioCtx.currentTime;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+  o.type = 'square';
+  o.frequency.setValueAtTime(1100, now);
+  o.frequency.setValueAtTime(900,  now + 0.18);
+  o.frequency.setValueAtTime(1200, now + 0.30);
+
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  o.start(now);
+  o.stop(now + 0.45);
+
+  if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 220]);
+}
+
+function maybeBeep(lastMs, repeatSec) {
+  const now = Date.now();
+  if (now - lastMs >= repeatSec * 1000) {
+    beepOnce();
+    return now;
+  }
+  return lastMs;
+}
+
+/* ===================== UI HANDLERS ===================== */
+unitToggle.addEventListener('click', () => {
+  state.useMmol = !state.useMmol;
+  unitToggle.textContent = state.useMmol ? 'mmol/L' : 'mg/dL';
+  unitToggle.classList.toggle('active', state.useMmol);
+  saveSettings();
+  render();
 });
 
-logFeedBtn.onclick=()=>{
-  state.lastFeed=Date.now();
-  lastFuelAlarm=0;
+function setMode(mode) {
+  state.mode = mode;
+  updateModeButtons();
+  saveSettings();
   render();
-};
+}
+function updateModeButtons() {
+  if (state.mode === 'training') {
+    modeTrainingBtn.classList.add('active');
+    modeRaceBtn.classList.remove('active');
+  } else {
+    modeTrainingBtn.classList.remove('active');
+    modeRaceBtn.classList.add('active');
+  }
+}
+modeTrainingBtn.addEventListener('click', () => setMode('training'));
+modeRaceBtn.addEventListener('click', () => setMode('race'));
 
-resetTimerBtn.onclick=()=>{
-  state.lastFeed=null;
-  lastFuelAlarm=0;
+settingsToggle.addEventListener('click', () => {
+  settingsPanel.classList.toggle('open');
+});
+
+function setZone(z) {
+  state.currentZone = z;
+  zoneButtons.forEach(btn => {
+    const bz = Number(btn.dataset.zone);
+    btn.classList.toggle('active', bz === z);
+  });
   render();
-};
+}
+zoneButtons.forEach(btn => btn.addEventListener('click', () => setZone(Number(btn.dataset.zone))));
 
-/* ---------------- NIGHTSCOUT ---------------- */
-async function fetchNS(){
-  try{
-    const r=await fetch(NS_URL+"/api/v1/entries.json?count=2");
-    const d=await r.json();
-    const e=d[0];
-    state.bg=e.sgv/18;
-    state.dir=e.direction;
+logFeedBtn.addEventListener('click', () => {
+  state.lastFeedTime = Date.now();
+  lastFuelAlarmMs = 0; // reset fuel alarm cycle
+  render();
+});
+resetTimerBtn.addEventListener('click', () => {
+  state.lastFeedTime = null;
+  lastFuelAlarmMs = 0;
+  render();
+});
+
+refreshBtn.addEventListener('click', fetchNightscout);
+
+/* ===================== NIGHTSCOUT FETCH ===================== */
+async function fetchNightscout() {
+  const base = NS_URL;
+  const url = base.replace(/\/+$/, '') + '/api/v1/entries.json?count=4';
+
+  statusLine.textContent = 'Refreshing from Nightscout…';
+
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      statusLine.textContent = 'Nightscout error: ' + res.status;
+      return;
+    }
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      statusLine.textContent = 'No data from Nightscout';
+      return;
+    }
+
+    const entry = data[0];
+    const sgv = Number(entry.sgv); // mg/dL
+    const direction = entry.direction || '';
+    const dateMs = entry.date || entry.dateString;
+
+    if (!Number.isFinite(sgv) || !dateMs) {
+      statusLine.textContent = 'Invalid Nightscout entry';
+      return;
+    }
+
+    state.lastBgMmol = sgv / 18.0;
+    state.lastDirection = direction;
+    state.lastDateMs = typeof dateMs === 'number' ? dateMs : Date.parse(dateMs);
+
+    computeProjection(data);
+
+    statusLine.textContent = 'Nightscout: OK';
     render();
-  }catch{
-    statusLine.textContent="Nightscout error";
+  } catch (e) {
+    console.log(e);
+    statusLine.textContent = 'Error talking to Nightscout';
   }
 }
 
-/* ---------------- LOGIC ---------------- */
-function stoplight(bg){
-  if(bg<4||bg>10)return"var(--red)";
-  if(bg>=6&&bg<=8)return"var(--green)";
-  return"var(--amber)";
-}
+/* ===================== TIMER TEXT ===================== */
+function getFeedTimerText() {
+  const now = Date.now();
 
-function render(){
-  if(state.bg){
-    bgValue.textContent=state.bg.toFixed(1);
-    bgStrip.style.background=stoplight(state.bg);
-  }
+  // Low protocol timer
+  if (state.lowActive && state.lowStartTime) {
+    const diffMin = (now - state.lowStartTime) / 60000;
+    const remaining = LOW_INTERVAL_MIN - diffMin;
 
-  let now=Date.now();
-  let remaining=null;
-  if(state.lastFeed){
-    remaining=FUEL_INTERVAL_MIN-(now-state.lastFeed)/60000;
-    timerLine.textContent=remaining>0?
-      `Next fuel in ${remaining.toFixed(1)} min`:
-      "Fuel due";
-  }
-
-  if(state.bg<4){
-    feedMain.textContent="STOP — take 15 g fast carbs";
-    if(!state.low){
-      state.low=true;
-      beep();
+    if (remaining > 0) {
+      lastLowAlarmMs = 0;
+      return `Low protocol active • Re-check in: ${remaining.toFixed(1)} min`;
+    } else {
+      // Repeat alarm every 30s once re-check window opens
+      lastLowAlarmMs = maybeBeep(lastLowAlarmMs, LOW_ALARM_REPEAT_SEC);
+      return 'Low protocol: re-check window active.';
     }
-  }else{
-    state.low=false;
-    if(remaining!==null&&remaining<=0){
-      if(now-lastFuelAlarm>30000){
-        beep();
-        lastFuelAlarm=now;
+  }
+
+  if (!state.lastFeedTime) return 'No feed logged yet';
+
+  const diffMin = (now - state.lastFeedTime) / 60000;
+  const since = diffMin < 1 ? '<1 min ago' : diffMin.toFixed(1) + ' min ago';
+  const remaining = FUEL_INTERVAL_MIN - diffMin;
+
+  if (remaining <= 0) return `Fuel window active • Last fuel: ${since}`;
+  return `Next fuel in: ${remaining.toFixed(1)} min • Last fuel: ${since}`;
+}
+
+/* ===================== PROJECTION ===================== */
+function computeProjection(entries) {
+  state.projBg20_mg = null;
+  if (!Array.isArray(entries) || entries.length < 2) return;
+
+  const sorted = entries.slice().sort((a,b)=>{
+    const ta = a.date || Date.parse(a.dateString);
+    const tb = b.date || Date.parse(b.dateString);
+    return tb - ta;
+  });
+
+  const newest = sorted[0];
+  const oldest = sorted[sorted.length - 1];
+
+  const sgvNew = Number(newest.sgv);
+  const sgvOld = Number(oldest.sgv);
+  const tNew = newest.date || Date.parse(newest.dateString);
+  const tOld = oldest.date || Date.parse(oldest.dateString);
+
+  if (!Number.isFinite(sgvNew) || !Number.isFinite(sgvOld) || !tNew || !tOld) return;
+
+  const dtMin = (tNew - tOld) / 60000;
+  if (dtMin <= 0.5) return;
+
+  const slopeMgPerMin = (sgvNew - sgvOld) / dtMin;
+  const horizonMin = 20;
+  state.projBg20_mg = sgvNew + slopeMgPerMin * horizonMin;
+}
+
+/* ===================== LOW STATE ===================== */
+function updateLowState(bgMmol) {
+  const now = Date.now();
+  if (bgMmol == null) return;
+
+  if (bgMmol < 4.0) {
+    if (!state.lowActive) {
+      state.lowActive = true;
+      state.lowStartTime = now;
+      state.lowRecoveredRecently = false;
+      state.lowRecoverTime = null;
+
+      // Immediate low alert
+      beepOnce();
+      lastLowAlarmMs = 0;
+    }
+  } else {
+    if (state.lowActive) {
+      state.lowActive = false;
+      lastLowAlarmMs = 0;
+      state.lowRecoveredRecently = true;
+      state.lowRecoverTime = now;
+    }
+
+    if (state.lowRecoveredRecently && state.lowRecoverTime) {
+      const sinceRecoverMin = (now - state.lowRecoverTime) / 60000;
+      if (sinceRecoverMin > 5) state.lowRecoveredRecently = false;
+    }
+  }
+}
+
+/* ===================== TRENDS / FUEL RULES ===================== */
+function isFalling(dir){ return dir === 'FortyFiveDown' || dir === 'SingleDown'; }
+function isFallingFast(dir){ return dir === 'DoubleDown'; }
+function isRising(dir){ return dir === 'FortyFiveUp' || dir === 'SingleUp'; }
+function isRisingFast(dir){ return dir === 'DoubleUp'; }
+
+function getTrendSymbol(direction) {
+  switch (direction) {
+    case 'DoubleUp':      return '↑↑';
+    case 'SingleUp':      return '↑';
+    case 'FortyFiveUp':   return '↗';
+    case 'Flat':          return '→';
+    case 'FortyFiveDown': return '↘';
+    case 'SingleDown':    return '↓';
+    case 'DoubleDown':    return '↓↓';
+    default:              return '';
+  }
+}
+
+function getCarbsPerZone() {
+  return state.mode === 'race' ? state.raceCarbs : state.trainingCarbs;
+}
+
+function getFuelInstruction(bgMmol, direction, zone, carbsZ, ageMin, remainingMin) {
+  const dir = direction || '';
+
+  function formatWhen(remaining) {
+    if (remaining == null) return 'this interval';
+    if (remaining <= 0) return 'now';
+    return `in ${remaining.toFixed(1)} min`;
+  }
+
+  // Low protocol wording (your requested wording)
+  if (state.lowActive && bgMmol != null && bgMmol < 4.0) {
+    return 'Stop cycling and dose 15g fast carbs — wait 15, and re-dose if necessary.';
+  }
+
+  if (!state.lowActive && state.lowRecoveredRecently && bgMmol != null && bgMmol >= 4.0) {
+    return 'BG recovered — resume cycling and fueling.';
+  }
+
+  if (bgMmol == null || !zone) return 'Set zone to see fueling';
+
+  if (ageMin != null && ageMin > 10) return 'Data old — check CGM';
+
+  const base = carbsZ[zone - 1] || 0;
+
+  // 4.0–6.0 mmol/L
+  if (bgMmol >= 4.0 && bgMmol < 6.0) {
+    let grams = base;
+    let tag = 'stable';
+    if (isFallingFast(dir)) { grams = base + 10; tag = 'falling fast'; }
+    else if (isFalling(dir)) { grams = base + 5; tag = 'falling'; }
+    return `Fuel: ${grams} g ${formatWhen(remainingMin)} (${tag})`;
+  }
+
+  // 6.0–8.0 mmol/L
+  if (bgMmol >= 6.0 && bgMmol <= 8.0) {
+    let grams = base;
+    let tag = 'standard';
+    if (isRisingFast(dir)) { grams = Math.max(0, base - 5); tag = 'rising fast'; }
+    return `Fuel: ${grams} g ${formatWhen(remainingMin)} (${tag})`;
+  }
+
+  // 8.0–10.0 mmol/L
+  if (bgMmol > 8.0 && bgMmol <= 10.0) {
+    if (isRising(dir) || isRisingFast(dir)) return 'Hold fuel (BG elevated, rising)';
+    if (zone >= 4) return `Fuel: ${base} g ${formatWhen(remainingMin)} (high intensity)`;
+    return 'Hold fuel (BG elevated)';
+  }
+
+  // >10.0 mmol/L
+  if (bgMmol > 10.0) return 'BG high — ride fueling suspended. Follow your plan.';
+
+  return '---';
+}
+
+function bgStoplightColor(bgMmol) {
+  if (bgMmol == null) return 'var(--neutral)';
+  if (bgMmol < 4.0 || bgMmol > 10.0) return 'var(--red)';
+  if (bgMmol >= 6.0 && bgMmol <= 8.0) return 'var(--green)';
+  return 'var(--amber)';
+}
+
+/* ===================== RENDER ===================== */
+function render() {
+  const bgMmol = state.lastBgMmol;
+  const dir = state.lastDirection;
+  const zone = state.currentZone;
+  const carbsZ = getCarbsPerZone();
+
+  updateLowState(bgMmol);
+
+  // BG strip
+  if (bgMmol == null) {
+    bgValue.textContent = '--.--';
+    bgSub.textContent = 'Waiting for CGM…';
+    bgStrip.style.background = 'var(--neutral)';
+  } else {
+    const sym = getTrendSymbol(dir);
+    if (state.useMmol) {
+      bgValue.textContent = bgMmol.toFixed(1) + ' ' + sym;
+      bgSub.textContent = 'mmol/L';
+    } else {
+      const bgMg = bgMmol * 18.0;
+      bgValue.textContent = bgMg.toFixed(0) + ' ' + sym;
+      bgSub.textContent = 'mg/dL';
+    }
+    bgStrip.style.background = bgStoplightColor(bgMmol);
+  }
+
+  // Zone line
+  if (!zone) {
+    zoneLine.textContent = 'Zone --';
+  } else {
+    const ftp = Number(ftpInput.value) || null;
+    let zoneTxt = 'Zone ' + zone;
+    if (ftp) {
+      const pctRanges = [
+        [0, 0.55],
+        [0.55, 0.75],
+        [0.75, 0.90],
+        [0.90, 1.05],
+        [1.05, 1.20]
+      ];
+      const r = pctRanges[zone - 1];
+      if (r) {
+        const low = Math.round(ftp * r[0]);
+        const high = Math.round(ftp * r[1]);
+        zoneTxt += ` (~${low}-${high}W)`;
       }
-      feedMain.textContent="Fuel now";
+    }
+    zoneLine.textContent = `${zoneTxt} • ${state.mode === 'race' ? 'Race' : 'Training'} plan`;
+  }
+
+  // CGM age
+  let ageMin = null;
+  if (state.lastDateMs) {
+    const ageMs = Date.now() - state.lastDateMs;
+    ageMin = ageMs / 60000;
+    const ageStr = ageMin < 1 ? '<1 min ago' : ageMin.toFixed(1) + ' min ago';
+    feedSub.textContent = 'Last CGM: ' + ageStr;
+  } else {
+    feedSub.textContent = '';
+  }
+
+  // Remaining time until next fuel
+  let remainingMin = null;
+  if (!state.lowActive && state.lastFeedTime) {
+    const diffMin = (Date.now() - state.lastFeedTime) / 60000;
+    remainingMin = FUEL_INTERVAL_MIN - diffMin;
+  }
+
+  // Repeat alarm while fuel is needed (every 30s)
+  if (!state.lowActive && remainingMin != null) {
+    if (remainingMin <= 0) {
+      lastFuelAlarmMs = maybeBeep(lastFuelAlarmMs, FUEL_ALARM_REPEAT_SEC);
+    } else {
+      lastFuelAlarmMs = 0;
     }
   }
+
+  // Fuel instruction
+  feedMain.textContent = getFuelInstruction(bgMmol, dir, zone, carbsZ, ageMin, remainingMin);
+
+  // Projection line
+  if (state.projBg20_mg != null && state.useMmol) {
+    const projMmol = state.projBg20_mg / 18.0;
+    projLine.textContent = `Projected ~${FUEL_INTERVAL_MIN} min BG (linear): ${projMmol.toFixed(1)} mmol/L`;
+  } else if (state.projBg20_mg != null && !state.useMmol) {
+    projLine.textContent = `Projected ~${FUEL_INTERVAL_MIN} min BG (linear): ${state.projBg20_mg.toFixed(0)} mg/dL`;
+  } else {
+    projLine.textContent = '';
+  }
+
+  timerLine.textContent = getFeedTimerText();
 }
 
-/* ---------------- INIT ---------------- */
-fetchNS();
-setInterval(fetchNS,60000);
-setInterval(render,15000);
+/* ===================== INIT ===================== */
+loadSettings();
+render();
+fetchNightscout();
+setInterval(fetchNightscout, 60000);
+setInterval(render, 15000);
 </script>
 </body>
 </html>
