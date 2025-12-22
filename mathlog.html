@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a84ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>BG • Insulin • Weight Tracker</title>
+
+  <style>
+    :root{
+      --bg:#0b0b0f;
+      --card:#151520;
+      --muted:#a7a7b5;
+      --text:#f3f3f7;
+      --accent:#0a84ff;
+      --good:#34c759;
+      --warn:#ff9f0a;
+      --bad:#ff453a;
+      --line:#2a2a3a;
+      --chip:#1f1f2d;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom) 14px;
+    }
+    header{
+      position: sticky;
+      top: 0;
+      padding: 12px 0 10px;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      z-index: 10;
+    }
+    h1{font-size:18px; margin:0 0 6px}
+    .sub{color:var(--muted); font-size:13px}
+
+    .tabs{
+      display:flex; gap:8px; margin-top:10px;
+    }
+    .tab{
+      flex:1;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      padding:10px 10px;
+      border-radius:12px;
+      font-weight:600;
+      font-size:14px;
+    }
+    .tab.active{background:var(--chip); border-color: color-mix(in srgb, var(--accent) 40%, var(--line))}
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+      margin:12px 0 16px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .field{flex:1; min-width:140px}
+    label{display:block; font-size:12px; color:var(--muted); margin:0 0 6px}
+    input, select, textarea{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#0f0f18;
+      color:var(--text);
+      font-size:16px;
+      outline:none;
+    }
+    textarea{min-height:44px; resize:vertical}
+    .btnrow{display:flex; gap:10px; margin-top:10px}
+    .btn{
+      flex:1;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background: var(--chip);
+      color:var(--text);
+      font-weight:700;
+      font-size:15px;
+    }
+    .btn.primary{
+      background: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+    }
+    .btn.danger{
+      background: color-mix(in srgb, var(--bad) 25%, var(--chip));
+      border-color: color-mix(in srgb, var(--bad) 40%, var(--line));
+    }
+    .chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+    .chip{
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:13px;
+    }
+    .chip.active{background:var(--chip)}
+    .note{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35}
+
+    table{width:100%; border-collapse:collapse; font-size:13px}
+    th, td{padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top}
+    th{color:var(--muted); font-weight:700; text-align:left}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:transparent;
+      font-weight:700;
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .pill.good{border-color: color-mix(in srgb, var(--good) 45%, var(--line))}
+    .pill.warn{border-color: color-mix(in srgb, var(--warn) 45%, var(--line))}
+    .pill.bad{border-color: color-mix(in srgb, var(--bad) 45%, var(--line))}
+    .muted{color:var(--muted)}
+    .right{float:right}
+    .small{font-size:12px}
+    .kpi{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .kpi .box{
+      background:#0f0f18;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+    }
+    .kpi .v{font-size:18px; font-weight:800}
+    .kpi .k{font-size:12px; color:var(--muted); margin-top:2px}
+    .footerpad{height:30px}
+    .hidden{display:none !important;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BG • Insulin • Weight Tracker</h1>
+    <div class="sub" id="statusLine">Offline-friendly • Data stored on this phone • Export CSV for backup</div>
+    <div class="tabs">
+      <button class="tab active" data-tab="log">Log</button>
+      <button class="tab" data-tab="today">Today</button>
+      <button class="tab" data-tab="week">7-Day</button>
+      <button class="tab" data-tab="all">All</button>
+    </div>
+  </header>
+
+  <!-- LOG TAB -->
+  <section id="tab-log" class="grid">
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label>Date</label>
+          <input id="date" type="date" />
+        </div>
+        <div class="field">
+          <label>Time</label>
+          <input id="time" type="time" />
+        </div>
+        <div class="field">
+          <label>Type</label>
+          <select id="type">
+            <option>Breakfast</option>
+            <option>Lunch</option>
+            <option>Dinner</option>
+            <option>Snack</option>
+            <option>Correction</option>
+            <option>Low Treatment</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label>BG before (mmol/L)</label>
+          <input id="bgBefore" inputmode="decimal" placeholder="e.g. 7.8" />
+        </div>
+        <div class="field">
+          <label>Carbs (g)</label>
+          <input id="carbs" inputmode="numeric" placeholder="e.g. 25" />
+        </div>
+        <div class="field">
+          <label>Insulin (units)</label>
+          <input id="units" inputmode="decimal" placeholder="e.g. 5" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label>Walk after? (10–15 min)</label>
+          <select id="walk">
+            <option value="Y">Y</option>
+            <option value="N">N</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>BG 2h after (mmol/L)</label>
+          <input id="bgAfter" inputmode="decimal" placeholder="e.g. 9.6" />
+        </div>
+        <div class="field">
+          <label>Notes (optional)</label>
+          <input id="notes" placeholder="short note" />
+        </div>
+      </div>
+
+      <div class="chips">
+        <button class="chip" data-quick="Breakfast">Breakfast</button>
+        <button class="chip" data-quick="Lunch">Lunch</button>
+        <button class="chip" data-quick="Dinner">Dinner</button>
+        <button class="chip" data-quick="Snack">Snack</button>
+        <button class="chip" data-quick="Low Treatment">Low</button>
+        <button class="chip" data-quick="Correction">Correction</button>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn primary" id="saveBtn">Save Entry</button>
+        <button class="btn" id="clearBtn">Clear</button>
+      </div>
+
+      <div class="note">
+        Tip: Keep carbs consistent (25–30g meals) while you dial in insulin. Export CSV weekly as a backup.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label>Weight (lbs) — optional daily</label>
+          <input id="weight" inputmode="decimal" placeholder="e.g. 175" />
+        </div>
+        <div class="field">
+          <label>Sleep (hours)</label>
+          <input id="sleep" inputmode="decimal" placeholder="e.g. 7.5" />
+        </div>
+        <div class="field">
+          <label>Stress (1–5)</label>
+          <select id="stress">
+            <option value="">—</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          </select>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="saveDayBtn">Save Daily Stats</button>
+        <button class="btn danger" id="wipeBtn">Wipe All Data</button>
+      </div>
+      <div class="note">
+        Daily stats are optional but help explain “mystery” highs (sleep/stress changes insulin sensitivity).
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="btnrow">
+        <button class="btn" id="exportBtn">Export CSV</button>
+        <button class="btn" id="importBtn">Import CSV</button>
+      </div>
+      <input class="hidden" type="file" id="fileInput" accept=".csv,text/csv" />
+      <div class="note">
+        Export is your backup (and shareable with your doctor). Import restores after switching phones.
+      </div>
+    </div>
+  </section>
+
+  <!-- TODAY TAB -->
+  <section id="tab-today" class="grid hidden">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:800;">Today</div>
+        <div class="muted small" id="todayDate"></div>
+      </div>
+      <div class="kpi">
+        <div class="box">
+          <div class="v" id="kpiEntries">0</div>
+          <div class="k">Entries</div>
+        </div>
+        <div class="box">
+          <div class="v" id="kpiWalkRate">0%</div>
+          <div class="k">Walk rate</div>
+        </div>
+        <div class="box">
+          <div class="v" id="kpiAvgAfter">—</div>
+          <div class="k">Avg 2h after</div>
+        </div>
+        <div class="box">
+          <div class="v" id="kpiAvgICR">—</div>
+          <div class="k">Avg carbs/unit</div>
+        </div>
+      </div>
+      <div class="note" id="todayHint"></div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>BG</th>
+            <th>Carbs/U</th>
+            <th>2h</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="todayTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- WEEK TAB -->
+  <section id="tab-week" class="grid hidden">
+    <div class="card">
+      <div style="font-weight:800;">Last 7 Days Summary</div>
+      <div class="kpi">
+        <div class="box">
+          <div class="v" id="wkAvgFasting">—</div>
+          <div class="k">Avg BG before</div>
+        </div>
+        <div class="box">
+          <div class="v" id="wkAvgAfter">—</div>
+          <div class="k">Avg 2h after</div>
+        </div>
+        <div class="box">
+          <div class="v" id="wkLows">0</div>
+          <div class="k">Low treatments</div>
+        </div>
+        <div class="box">
+          <div class="v" id="wkWalkRate">0%</div>
+          <div class="k">Walk rate</div>
+        </div>
+      </div>
+      <div class="note" id="wkInsight"></div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th class="right">Entries</th>
+            <th class="right">Avg 2h</th>
+            <th class="right">Walk%</th>
+          </tr>
+        </thead>
+        <tbody id="weekTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ALL TAB -->
+  <section id="tab-all" class="grid hidden">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:800;">All Entries</div>
+        <div class="muted small" id="allCount"></div>
+      </div>
+      <div class="note">Tap 🗑️ to delete an entry. Export CSV before wiping data.</div>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Date/Time</th>
+            <th>Type</th>
+            <th>BG</th>
+            <th>Carbs/U</th>
+            <th>2h</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="allTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="footerpad"></div>
+
+<script>
+/* -------------------- Storage -------------------- */
+const KEY_ENTRIES = "bg_tracker_entries_v1";
+const KEY_DAILY   = "bg_tracker_daily_v1";
+
+function loadEntries(){
+  try { return JSON.parse(localStorage.getItem(KEY_ENTRIES) || "[]"); }
+  catch { return []; }
+}
+function saveEntries(arr){
+  localStorage.setItem(KEY_ENTRIES, JSON.stringify(arr));
+}
+function loadDaily(){
+  try { return JSON.parse(localStorage.getItem(KEY_DAILY) || "{}"); }
+  catch { return {}; }
+}
+function saveDaily(obj){
+  localStorage.setItem(KEY_DAILY, JSON.stringify(obj));
+}
+
+function todayISO(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+function nowTime(){
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${hh}:${mm}`;
+}
+function toNum(x){
+  if (x === null || x === undefined) return null;
+  const s = String(x).trim().replace(",", ".");
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+function fmt(n, digits=1){
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  return n.toFixed(digits);
+}
+function safeDiv(a,b){
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b === 0) return null;
+  return a/b;
+}
+function withinLastDays(dateStr, days){
+  const d = new Date(dateStr+"T00:00:00");
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - (days-1));
+  cutoff.setHours(0,0,0,0);
+  return d >= cutoff;
+}
+
+/* -------------------- UI Elements -------------------- */
+const el = (id)=>document.getElementById(id);
+
+const dateEl = el("date");
+const timeEl = el("time");
+const typeEl = el("type");
+const bgBeforeEl = el("bgBefore");
+const carbsEl = el("carbs");
+const unitsEl = el("units");
+const walkEl = el("walk");
+const bgAfterEl = el("bgAfter");
+const notesEl = el("notes");
+
+const weightEl = el("weight");
+const sleepEl = el("sleep");
+const stressEl = el("stress");
+
+const saveBtn = el("saveBtn");
+const clearBtn = el("clearBtn");
+const saveDayBtn = el("saveDayBtn");
+const wipeBtn = el("wipeBtn");
+const exportBtn = el("exportBtn");
+const importBtn = el("importBtn");
+const fileInput = el("fileInput");
+
+const todayTable = el("todayTable");
+const allTable = el("allTable");
+const allCount = el("allCount");
+
+const todayDate = el("todayDate");
+const kpiEntries = el("kpiEntries");
+const kpiWalkRate = el("kpiWalkRate");
+const kpiAvgAfter = el("kpiAvgAfter");
+const kpiAvgICR = el("kpiAvgICR");
+const todayHint = el("todayHint");
+
+const wkAvgFasting = el("wkAvgFasting");
+const wkAvgAfter = el("wkAvgAfter");
+const wkLows = el("wkLows");
+const wkWalkRate = el("wkWalkRate");
+const wkInsight = el("wkInsight");
+const weekTable = el("weekTable");
+
+function resetForm(){
+  dateEl.value = todayISO();
+  timeEl.value = nowTime();
+  typeEl.value = "Breakfast";
+  bgBeforeEl.value = "";
+  carbsEl.value = "";
+  unitsEl.value = "";
+  walkEl.value = "Y";
+  bgAfterEl.value = "";
+  notesEl.value = "";
+}
+function setQuickType(t){
+  typeEl.value = t;
+  // simple: default walking yes for meals/snacks, no for correction/low
+  walkEl.value = (t === "Correction" || t === "Low Treatment") ? "N" : "Y";
+}
+document.querySelectorAll(".chip").forEach(btn=>{
+  btn.addEventListener("click", ()=> setQuickType(btn.dataset.quick));
+});
+
+/* -------------------- Tabs -------------------- */
+const tabs = document.querySelectorAll(".tab");
+const sections = {
+  log: el("tab-log"),
+  today: el("tab-today"),
+  week: el("tab-week"),
+  all: el("tab-all"),
+};
+function showTab(name){
+  tabs.forEach(t=>t.classList.toggle("active", t.dataset.tab===name));
+  Object.entries(sections).forEach(([k,sec])=>{
+    sec.classList.toggle("hidden", k!==name);
+  });
+  render();
+}
+tabs.forEach(t=>t.addEventListener("click", ()=>showTab(t.dataset.tab)));
+
+/* -------------------- Save entry -------------------- */
+saveBtn.addEventListener("click", ()=>{
+  const entry = {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+"_"+Math.random().toString(16).slice(2),
+    date: dateEl.value || todayISO(),
+    time: timeEl.value || nowTime(),
+    type: typeEl.value,
+    bgBefore: toNum(bgBeforeEl.value),
+    carbs: toNum(carbsEl.value),
+    units: toNum(unitsEl.value),
+    walk: walkEl.value,
+    bgAfter: toNum(bgAfterEl.value),
+    notes: (notesEl.value || "").trim(),
+    createdAt: Date.now()
+  };
+  const entries = loadEntries();
+  entries.push(entry);
+  // sort by datetime
+  entries.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  saveEntries(entries);
+  resetForm();
+  render();
+  alert("Saved ✅");
+});
+
+clearBtn.addEventListener("click", resetForm);
+
+/* -------------------- Save daily stats -------------------- */
+saveDayBtn.addEventListener("click", ()=>{
+  const d = dateEl.value || todayISO();
+  const daily = loadDaily();
+  daily[d] = {
+    weight: toNum(weightEl.value),
+    sleep: toNum(sleepEl.value),
+    stress: stressEl.value ? Number(stressEl.value) : null,
+    updatedAt: Date.now()
+  };
+  saveDaily(daily);
+  render();
+  alert("Saved daily stats ✅");
+});
+
+/* -------------------- Delete entry -------------------- */
+function deleteEntry(id){
+  if (!confirm("Delete this entry?")) return;
+  const entries = loadEntries().filter(e=>e.id!==id);
+  saveEntries(entries);
+  render();
+}
+
+/* -------------------- Export / Import CSV -------------------- */
+function entriesToCSV(entries, daily){
+  const header = [
+    "date","time","type","bg_before_mmol","carbs_g","insulin_units","walk","bg_2h_after_mmol","notes",
+    "daily_weight_lbs","daily_sleep_hours","daily_stress_1_5"
+  ];
+  const lines = [header.join(",")];
+
+  for (const e of entries){
+    const ds = daily[e.date] || {};
+    const row = [
+      e.date,
+      e.time,
+      e.type,
+      e.bgBefore ?? "",
+      e.carbs ?? "",
+      e.units ?? "",
+      e.walk ?? "",
+      e.bgAfter ?? "",
+      (e.notes || "").replaceAll('"','""'),
+      ds.weight ?? "",
+      ds.sleep ?? "",
+      ds.stress ?? ""
+    ];
+    // quote notes
+    row[8] = `"${row[8]}"`;
+    lines.push(row.join(","));
+  }
+  return lines.join("\n");
+}
+
+exportBtn.addEventListener("click", ()=>{
+  const entries = loadEntries();
+  const daily = loadDaily();
+  const csv = entriesToCSV(entries, daily);
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `bg-tracker-${todayISO()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+importBtn.addEventListener("click", ()=> fileInput.click());
+
+fileInput.addEventListener("change", async (ev)=>{
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  const rows = text.split(/\r?\n/).filter(Boolean);
+  if (rows.length < 2){ alert("CSV looks empty."); return; }
+
+  const header = rows[0].split(",").map(s=>s.trim());
+  const idx = (name)=> header.indexOf(name);
+
+  const req = ["date","time","type","bg_before_mmol","carbs_g","insulin_units","walk","bg_2h_after_mmol","notes"];
+  if (!req.every(k=>idx(k)>=0)){
+    alert("CSV header not recognized. Export from this app first.");
+    return;
+  }
+
+  const entries = [];
+  const daily = loadDaily();
+
+  for (let i=1;i<rows.length;i++){
+    const line = rows[i];
+    if (!line.trim()) continue;
+
+    // handle quoted notes
+    const parts = [];
+    let cur = "";
+    let inQ = false;
+    for (let j=0;j<line.length;j++){
+      const ch = line[j];
+      if (ch === '"' && line[j+1] === '"' ){ cur += '"'; j++; continue; }
+      if (ch === '"'){ inQ = !inQ; continue; }
+      if (ch === "," && !inQ){ parts.push(cur); cur=""; continue; }
+      cur += ch;
+    }
+    parts.push(cur);
+
+    const date = parts[idx("date")]?.trim();
+    const time = parts[idx("time")]?.trim();
+    const type = parts[idx("type")]?.trim() || "Snack";
+
+    const e = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+"_"+Math.random().toString(16).slice(2),
+      date,
+      time,
+      type,
+      bgBefore: toNum(parts[idx("bg_before_mmol")]),
+      carbs: toNum(parts[idx("carbs_g")]),
+      units: toNum(parts[idx("insulin_units")]),
+      walk: (parts[idx("walk")] || "N").trim() || "N",
+      bgAfter: toNum(parts[idx("bg_2h_after_mmol")]),
+      notes: (parts[idx("notes")] || "").trim(),
+      createdAt: Date.now()
+    };
+    entries.push(e);
+
+    // daily stats if present
+    const w = toNum(parts[idx("daily_weight_lbs")]);
+    const sl = toNum(parts[idx("daily_sleep_hours")]);
+    const st = toNum(parts[idx("daily_stress_1_5")]);
+    if (date){
+      daily[date] = daily[date] || {};
+      if (w !== null) daily[date].weight = w;
+      if (sl !== null) daily[date].sleep = sl;
+      if (st !== null) daily[date].stress = st;
+      daily[date].updatedAt = Date.now();
+    }
+  }
+
+  if (!confirm("Import will ADD entries (not replace). Continue?")) return;
+  const merged = loadEntries().concat(entries);
+  merged.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  saveEntries(merged);
+  saveDaily(daily);
+  fileInput.value = "";
+  render();
+  alert("Imported ✅");
+});
+
+/* -------------------- Wipe -------------------- */
+wipeBtn.addEventListener("click", ()=>{
+  const ok = confirm("This will delete ALL data on this phone. Export CSV first. Continue?");
+  if (!ok) return;
+  localStorage.removeItem(KEY_ENTRIES);
+  localStorage.removeItem(KEY_DAILY);
+  render();
+  alert("Wiped.");
+});
+
+/* -------------------- Rendering -------------------- */
+function pillForBG(v){
+  if (!Number.isFinite(v)) return `<span class="pill muted">—</span>`;
+  let cls="warn";
+  if (v < 4.0) cls="bad";
+  else if (v <= 10.0) cls="good";
+  else if (v > 14.0) cls="bad";
+  return `<span class="pill ${cls}">${fmt(v,1)}</span>`;
+}
+function pillForICR(carbs, units){
+  const icr = safeDiv(carbs, units);
+  if (!Number.isFinite(icr)) return `<span class="pill muted">—</span>`;
+  let cls="warn";
+  if (icr >= 8 && icr <= 12) cls="good";
+  else if (icr < 5) cls="bad";
+  return `<span class="pill ${cls}">${fmt(icr,1)} g/U</span>`;
+}
+
+function renderToday(entries){
+  const d = todayISO();
+  todayDate.textContent = d;
+  const list = entries.filter(e=>e.date===d).sort((a,b)=>a.time.localeCompare(b.time));
+
+  todayTable.innerHTML = list.map(e=>{
+    const icrP = pillForICR(e.carbs, e.units);
+    const walkP = e.walk==="Y" ? `<span class="pill good">Walk</span>` : `<span class="pill muted">No walk</span>`;
+    return `
+      <tr>
+        <td>${e.time || ""}</td>
+        <td>${e.type}</td>
+        <td>${pillForBG(e.bgBefore)}</td>
+        <td>${icrP}</td>
+        <td>${pillForBG(e.bgAfter)} ${walkP}</td>
+        <td><button class="btn danger small" onclick="window.__del('${e.id}')">🗑️</button></td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="6" class="muted">No entries yet today.</td></tr>`;
+
+  const n = list.length;
+  const walkN = list.filter(e=>e.walk==="Y").length;
+  const afterVals = list.map(e=>e.bgAfter).filter(Number.isFinite);
+  const icrVals = list.map(e=>safeDiv(e.carbs, e.units)).filter(Number.isFinite);
+
+  kpiEntries.textContent = String(n);
+  kpiWalkRate.textContent = n ? Math.round((walkN/n)*100)+"%" : "0%";
+  kpiAvgAfter.textContent = afterVals.length ? fmt(afterVals.reduce((a,b)=>a+b,0)/afterVals.length,1) : "—";
+  kpiAvgICR.textContent = icrVals.length ? fmt(icrVals.reduce((a,b)=>a+b,0)/icrVals.length,1)+" g/U" : "—";
+
+  // gentle hint
+  const hint = [];
+  const highAfter = afterVals.filter(v=>v>10).length;
+  const lowEvents = list.filter(e=>e.type==="Low Treatment").length;
+  if (highAfter >= 2) hint.push("You’re seeing multiple post-meal highs. Try 10–15 min walks after meals and keep carbs consistent.");
+  if (lowEvents >= 1) hint.push("Low treatments happened today—treat lows precisely (15g fast carb) to avoid rebound eating.");
+  if (!hint.length) hint.push("Nice. Consistency + post-meal walking is the fastest way to reduce insulin storage and weight gain.");
+  todayHint.textContent = hint.join(" ");
+}
+
+function renderAll(entries){
+  allCount.textContent = `${entries.length} total`;
+  const list = [...entries].sort((a,b)=> (b.date+b.time).localeCompare(a.date+a.time));
+  allTable.innerHTML = list.map(e=>{
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:800">${e.date} ${e.time}</div>
+          <div class="muted small">${e.notes ? e.notes : ""}</div>
+        </td>
+        <td>${e.type}</td>
+        <td>${pillForBG(e.bgBefore)}</td>
+        <td>${pillForICR(e.carbs, e.units)}</td>
+        <td>${pillForBG(e.bgAfter)}</td>
+        <td><button class="btn danger small" onclick="window.__del('${e.id}')">🗑️</button></td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="6" class="muted">No entries yet.</td></tr>`;
+}
+
+function renderWeek(entries){
+  const last7 = entries.filter(e=>withinLastDays(e.date, 7));
+  const byDate = {};
+  for (const e of last7){
+    byDate[e.date] = byDate[e.date] || [];
+    byDate[e.date].push(e);
+  }
+  const dates = Object.keys(byDate).sort().reverse(); // newest first
+
+  // KPIs
+  const fastingVals = last7.map(e=>e.bgBefore).filter(Number.isFinite);
+  const afterVals = last7.map(e=>e.bgAfter).filter(Number.isFinite);
+  const lowCount = last7.filter(e=>e.type==="Low Treatment").length;
+  const walkCount = last7.filter(e=>e.walk==="Y").length;
+
+  wkAvgFasting.textContent = fastingVals.length ? fmt(fastingVals.reduce((a,b)=>a+b,0)/fastingVals.length,1) : "—";
+  wkAvgAfter.textContent = afterVals.length ? fmt(afterVals.reduce((a,b)=>a+b,0)/afterVals.length,1) : "—";
+  wkLows.textContent = String(lowCount);
+  wkWalkRate.textContent = last7.length ? Math.round((walkCount/last7.length)*100)+"%" : "0%";
+
+  // Insight
+  const insight = [];
+  const avgAfter = afterVals.length ? afterVals.reduce((a,b)=>a+b,0)/afterVals.length : null;
+  if (avgAfter !== null && avgAfter > 10) insight.push("Average post-meal BG is high — focus on consistent carbs (25–30g/meal) + walk after meals.");
+  if (lowCount >= 2) insight.push("Multiple low treatments — tighten low treatment to 15g fast carb only to reduce rebound calories.");
+  if (!insight.length) insight.push("Your 7-day trend looks solid. Keep consistency and aim for a higher walk rate.");
+  wkInsight.textContent = insight.join(" ");
+
+  // Table
+  weekTable.innerHTML = dates.map(d=>{
+    const list = byDate[d];
+    const n = list.length;
+    const walkN = list.filter(e=>e.walk==="Y").length;
+    const after = list.map(e=>e.bgAfter).filter(Number.isFinite);
+    const avg2h = after.length ? after.reduce((a,b)=>a+b,0)/after.length : null;
+    return `
+      <tr>
+        <td>${d}</td>
+        <td class="right">${n}</td>
+        <td class="right">${avg2h!==null ? fmt(avg2h,1) : "—"}</td>
+        <td class="right">${n ? Math.round((walkN/n)*100)+"%" : "0%"}</td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="4" class="muted">No entries in the last 7 days.</td></tr>`;
+}
+
+function render(){
+  const entries = loadEntries();
+  renderToday(entries);
+  renderWeek(entries);
+  renderAll(entries);
+
+  // load daily stats for selected date (for convenience)
+  const d = dateEl.value || todayISO();
+  const daily = loadDaily();
+  const ds = daily[d] || {};
+  weightEl.value = (ds.weight ?? "");
+  sleepEl.value = (ds.sleep ?? "");
+  stressEl.value = (ds.stress ?? "");
+
+  // status line
+  el("statusLine").textContent = navigator.onLine
+    ? "Online (but works offline) • Data stored on this phone • Export CSV for backup"
+    : "Offline mode • Data stored on this phone • Export CSV for backup";
+}
+
+// delete hook for inline buttons
+window.__del = deleteEntry;
+
+/* -------------------- PWA (manifest + service worker) -------------------- */
+(function setupPWA(){
+  // Create a tiny manifest at runtime (single file deploy)
+  const manifest = {
+    name: "BG Insulin Weight Tracker",
+    short_name: "BG Tracker",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#0b0b0f",
+    theme_color: "#0a84ff",
+    icons: [
+      { src: "data:image/svg+xml;base64," + btoa(`<svg xmlns='http://www.w3.org/2000/svg' width='192' height='192'><rect width='100%' height='100%' rx='40' fill='#0a84ff'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui' font-size='72' font-weight='800' fill='white'>BG</text></svg>`), sizes:"192x192", type:"image/svg+xml" },
+      { src: "data:image/svg+xml;base64," + btoa(`<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512'><rect width='100%' height='100%' rx='110' fill='#0a84ff'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui' font-size='180' font-weight='800' fill='white'>BG</text></svg>`), sizes:"512x512", type:"image/svg+xml" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:"application/manifest+json"});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("link");
+  link.rel = "manifest";
+  link.href = url;
+  document.head.appendChild(link);
+
+  // Service worker for offline cache (only works when served via https like GitHub Pages)
+  if ("serviceWorker" in navigator){
+    const swCode = `
+      const CACHE = "bg-tracker-cache-v1";
+      self.addEventListener("install", (e) => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./"])));
+        self.skipWaiting();
+      });
+      self.addEventListener("activate", (e) => { self.clients.claim(); });
+      self.addEventListener("fetch", (e) => {
+        e.respondWith(
+          caches.match(e.request).then(res => res || fetch(e.request).then(net => {
+            const copy = net.clone();
+            caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
+            return net;
+          }).catch(()=>res))
+        );
+      });
+    `;
+    const swBlob = new Blob([swCode], {type:"text/javascript"});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  }
+})();
+
+/* -------------------- Init -------------------- */
+dateEl.addEventListener("change", render);
+resetForm();
+render();
+</script>
+</body>
+</html>
