@@ -199,7 +199,8 @@
       margin-top: 0.3rem;
     }
 
-    .timer-row button {
+    .timer-row button,
+    .settings-save-btn {
       border: none;
       border-radius: 0.60rem;
       padding: 0.4rem;
@@ -209,7 +210,8 @@
       flex: 1;
     }
 
-    .timer-row button:active {
+    .timer-row button:active,
+    .settings-save-btn:active {
       background: #444;
     }
 
@@ -220,7 +222,7 @@
     }
 
     .settings-panel.open {
-      max-height: 780px;
+      max-height: 980px;
     }
 
     .settings-caption {
@@ -288,6 +290,19 @@
   <div class="card settings-panel" id="settingsPanel">
     <div class="row">
       <div>
+        <label for="nsUrlInput">Nightscout URL</label>
+        <input id="nsUrlInput" type="text" placeholder="https://your-site.nightscout..." />
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:0.35rem;">
+      <div>
+        <button id="saveSettingsBtn" class="settings-save-btn">Save settings</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:0.4rem;">
+      <div>
         <label for="ftpInput">FTP (watts)</label>
         <input id="ftpInput" type="number" inputmode="numeric" value="305" />
       </div>
@@ -336,13 +351,13 @@
     </div>
 
     <div class="settings-caption">
-      Manual / MDI is the default. Fast-carb actions under 7.0 mmol/L do not reset the main 20-minute fuel timer. The document you shared supports small fast-acting CHO under 7.0 mmol/L, scaled to trend, rather than large over-corrections.  [oai_citation:2‡ISPAD-EASD position paper AID and phys activity.pdf](sediment://file_00000000380c720cae23efcdebf45d16)
+      Nightscout URL and app settings are saved on this device, so you should not need to enter them again unless you clear browser data.
     </div>
   </div>
 
   <script>
     // ----- CONSTANTS -----
-    const NS_URL = "https://keithgarvin.us.nightscoutpro.com";
+    const DEFAULT_NS_URL = "https://keithgarvin.us.nightscoutpro.com";
     const FUEL_INTERVAL_MIN = 20;
     const LOW_INTERVAL_MIN = 15;
     const FAST_RECHECK_MIN = 10;
@@ -359,9 +374,10 @@
 
     // ----- STATE -----
     let state = {
+      nsUrl: DEFAULT_NS_URL,
       useMmol: true,
-      insulinMode: "manual",  // manual | aid
-      fuelPlan: "training",   // training | race
+      insulinMode: "manual",
+      fuelPlan: "training",
       currentZone: null,
       lastBgMmol: null,
       lastDirection: null,
@@ -394,6 +410,9 @@
     const settingsToggle = document.getElementById('settingsToggle');
     const refreshBtn = document.getElementById('refreshBtn');
 
+    const nsUrlInput = document.getElementById('nsUrlInput');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+
     const modeManualBtn = document.getElementById('modeManual');
     const modeAidBtn = document.getElementById('modeAid');
     const planTrainingBtn = document.getElementById('planTraining');
@@ -425,7 +444,11 @@
     // ----- SETTINGS STORAGE -----
     function loadSettings() {
       try {
-        const saved = JSON.parse(localStorage.getItem('nsFuelSettingsV5') || '{}');
+        const saved = JSON.parse(localStorage.getItem('nsFuelSettingsV6') || '{}');
+
+        if (typeof saved.nsUrl === 'string' && saved.nsUrl.trim()) {
+          state.nsUrl = saved.nsUrl.trim();
+        }
 
         if (saved.ftp) ftpInput.value = saved.ftp;
         if (typeof saved.useMmol === 'boolean') state.useMmol = saved.useMmol;
@@ -444,6 +467,7 @@
         state.raceCarbs = DEFAULT_RACE.slice();
       }
 
+      nsUrlInput.value = state.nsUrl;
       unitToggle.textContent = state.useMmol ? 'mmol/L' : 'mg/dL';
       unitToggle.classList.toggle('active', state.useMmol);
 
@@ -454,8 +478,11 @@
       updatePlanButtons();
     }
 
-    function saveSettings() {
+    function saveSettings(showMessage = false) {
+      state.nsUrl = (nsUrlInput.value || '').trim() || DEFAULT_NS_URL;
+
       const settings = {
+        nsUrl: state.nsUrl,
         ftp: Number(ftpInput.value) || null,
         useMmol: state.useMmol,
         insulinMode: state.insulinMode,
@@ -463,7 +490,15 @@
         trainingCarbs: state.trainingCarbs,
         raceCarbs: state.raceCarbs
       };
-      localStorage.setItem('nsFuelSettingsV5', JSON.stringify(settings));
+
+      localStorage.setItem('nsFuelSettingsV6', JSON.stringify(settings));
+
+      if (showMessage) {
+        statusLine.textContent = 'Settings saved';
+        setTimeout(() => {
+          statusLine.textContent = 'Nightscout: idle';
+        }, 1200);
+      }
     }
 
     function updateCarbArraysFromInputs() {
@@ -475,7 +510,13 @@
 
     trainInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
     raceInputs.forEach(inp => inp.addEventListener('change', updateCarbArraysFromInputs));
-    ftpInput.addEventListener('change', saveSettings);
+    ftpInput.addEventListener('change', () => saveSettings());
+    nsUrlInput.addEventListener('change', () => saveSettings());
+
+    saveSettingsBtn.addEventListener('click', () => {
+      saveSettings(true);
+      fetchNightscout();
+    });
 
     // ----- ALARMS + FLASH -----
     let audioReady = false;
@@ -612,7 +653,14 @@
 
     // ----- NIGHTSCOUT -----
     async function fetchNightscout() {
-      const url = NS_URL.replace(/\/+$/, '') + '/api/v1/entries.json?count=4';
+      const baseUrl = (state.nsUrl || '').trim();
+
+      if (!baseUrl) {
+        statusLine.textContent = 'Nightscout URL not set';
+        return;
+      }
+
+      const url = baseUrl.replace(/\/+$/, '') + '/api/v1/entries.json?count=4';
       statusLine.textContent = 'Refreshing from Nightscout…';
 
       try {
@@ -893,7 +941,6 @@
         return '---';
       }
 
-      // AID mode
       if (bgMmol >= 4.0 && bgMmol < 7.0) {
         let grams = base;
         let tag = 'stable';
@@ -941,7 +988,6 @@
     // ----- COLOURS -----
     function bgStoplightColor(bgMmol, direction) {
       if (bgMmol == null) return 'var(--neutral)';
-
       if (bgMmol < 4.0 || bgMmol > 10.0) return 'var(--red)';
       if (bgMmol < 5.0 && (isFalling(direction) || isFallingFast(direction))) return 'var(--red)';
 
@@ -1020,7 +1066,6 @@
         remainingMin = FUEL_INTERVAL_MIN - diffMin;
       }
 
-      // Main fuel alarm only in main fueling zone
       if (!state.lowActive && remainingMin != null) {
         const shouldAlarmForFuel =
           bgMmol != null &&
