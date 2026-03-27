@@ -222,7 +222,7 @@
     }
 
     .settings-panel.open {
-      max-height: 980px;
+      max-height: 1100px;
     }
 
     .settings-caption {
@@ -329,6 +329,14 @@
     </div>
 
     <div style="margin-top:0.4rem;">
+      <label>Voice alerts</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="voiceOffBtn">Off</button>
+        <button class="mode-btn" id="voiceOnBtn">On</button>
+      </div>
+    </div>
+
+    <div style="margin-top:0.4rem;">
       <label>Training carbs per 20 min (g)</label>
       <div class="row">
         <div><label for="trainZ1">Z1</label><input id="trainZ1" type="number" /></div>
@@ -351,7 +359,7 @@
     </div>
 
     <div class="settings-caption">
-      Nightscout URL and app settings are saved on this device, so you should not need to enter them again unless you clear browser data.
+      Nightscout URL and app settings are saved on this device. Voice prompts work best while the page is open and after at least one tap to unlock audio on iPhone.
     </div>
   </div>
 
@@ -378,6 +386,7 @@
       useMmol: true,
       insulinMode: "manual",
       fuelPlan: "training",
+      voiceAlerts: false,
       currentZone: null,
       lastBgMmol: null,
       lastDirection: null,
@@ -390,7 +399,14 @@
       lowRecoveredRecently: false,
       lowRecoverTime: null,
       trainingCarbs: DEFAULT_TRAINING.slice(),
-      raceCarbs: DEFAULT_RACE.slice()
+      raceCarbs: DEFAULT_RACE.slice(),
+
+      fastCarbAlertActive: false,
+      fuelAlertActive: false,
+      lowAlertActive: false,
+      fastCarbAlertText: '',
+      fuelAlertText: '',
+      lowAlertText: ''
     };
 
     // ----- ELEMENTS -----
@@ -417,6 +433,8 @@
     const modeAidBtn = document.getElementById('modeAid');
     const planTrainingBtn = document.getElementById('planTraining');
     const planRaceBtn = document.getElementById('planRace');
+    const voiceOffBtn = document.getElementById('voiceOffBtn');
+    const voiceOnBtn = document.getElementById('voiceOnBtn');
     const unitToggle = document.getElementById('unitToggle');
 
     const ftpInput = document.getElementById('ftpInput');
@@ -444,7 +462,7 @@
     // ----- SETTINGS STORAGE -----
     function loadSettings() {
       try {
-        const saved = JSON.parse(localStorage.getItem('nsFuelSettingsV6') || '{}');
+        const saved = JSON.parse(localStorage.getItem('nsFuelSettingsV7') || '{}');
 
         if (typeof saved.nsUrl === 'string' && saved.nsUrl.trim()) {
           state.nsUrl = saved.nsUrl.trim();
@@ -454,6 +472,7 @@
         if (typeof saved.useMmol === 'boolean') state.useMmol = saved.useMmol;
         if (saved.insulinMode === 'manual' || saved.insulinMode === 'aid') state.insulinMode = saved.insulinMode;
         if (saved.fuelPlan === 'training' || saved.fuelPlan === 'race') state.fuelPlan = saved.fuelPlan;
+        if (typeof saved.voiceAlerts === 'boolean') state.voiceAlerts = saved.voiceAlerts;
 
         state.trainingCarbs = Array.isArray(saved.trainingCarbs) && saved.trainingCarbs.length === 5
           ? saved.trainingCarbs
@@ -476,6 +495,7 @@
 
       updateModeButtons();
       updatePlanButtons();
+      updateVoiceButtons();
     }
 
     function saveSettings(showMessage = false) {
@@ -487,11 +507,12 @@
         useMmol: state.useMmol,
         insulinMode: state.insulinMode,
         fuelPlan: state.fuelPlan,
+        voiceAlerts: state.voiceAlerts,
         trainingCarbs: state.trainingCarbs,
         raceCarbs: state.raceCarbs
       };
 
-      localStorage.setItem('nsFuelSettingsV6', JSON.stringify(settings));
+      localStorage.setItem('nsFuelSettingsV7', JSON.stringify(settings));
 
       if (showMessage) {
         statusLine.textContent = 'Settings saved';
@@ -518,14 +539,16 @@
       fetchNightscout();
     });
 
-    // ----- ALARMS + FLASH -----
+    // ----- ALARMS + FLASH + VOICE -----
     let audioReady = false;
     let audioCtx = null;
     let lastFuelAlarmMs = 0;
     let lastLowAlarmMs = 0;
+    let lastFastCarbAlarmMs = 0;
 
     const FUEL_ALARM_REPEAT_SEC = 30;
     const LOW_ALARM_REPEAT_SEC = 30;
+    const FAST_ALARM_REPEAT_SEC = 30;
 
     const flashOverlay = document.getElementById('flashOverlay');
 
@@ -541,14 +564,22 @@
     }
 
     function initAudioOnce() {
-      if (audioReady) return;
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      audioReady = true;
+      if (!audioReady) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioReady = true;
+      }
+
+      // wake speech synthesis path too
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance('');
+        window.speechSynthesis.speak(utter);
+        window.speechSynthesis.cancel();
+      }
     }
 
     document.addEventListener('click', initAudioOnce, { once: true });
 
-    function beepOnce() {
+    function beepOnly() {
       tripleFlash();
 
       if (!audioReady || !audioCtx) return;
@@ -575,10 +606,31 @@
       if (navigator.vibrate) navigator.vibrate([180, 80, 180, 80, 220]);
     }
 
-    function maybeBeep(lastMs, repeatSec) {
+    function speakText(text) {
+      if (!state.voiceAlerts) return;
+      if (!('speechSynthesis' in window)) return;
+      if (!text) return;
+
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      u.volume = 1.0;
+      window.speechSynthesis.speak(u);
+    }
+
+    function announce(text) {
+      beepOnly();
+      speakText(text);
+    }
+
+    function maybeAlarm(lastMs, repeatSec, text) {
       const now = Date.now();
       if (now - lastMs >= repeatSec * 1000) {
-        beepOnce();
+        announce(text);
         return now;
       }
       return lastMs;
@@ -601,6 +653,11 @@
     function updatePlanButtons() {
       planTrainingBtn.classList.toggle('active', state.fuelPlan === 'training');
       planRaceBtn.classList.toggle('active', state.fuelPlan === 'race');
+    }
+
+    function updateVoiceButtons() {
+      voiceOffBtn.classList.toggle('active', state.voiceAlerts === false);
+      voiceOnBtn.classList.toggle('active', state.voiceAlerts === true);
     }
 
     modeManualBtn.addEventListener('click', () => {
@@ -629,6 +686,19 @@
       updatePlanButtons();
       saveSettings();
       render();
+    });
+
+    voiceOffBtn.addEventListener('click', () => {
+      state.voiceAlerts = false;
+      updateVoiceButtons();
+      saveSettings();
+    });
+
+    voiceOnBtn.addEventListener('click', () => {
+      state.voiceAlerts = true;
+      updateVoiceButtons();
+      saveSettings();
+      initAudioOnce();
     });
 
     settingsToggle.addEventListener('click', () => {
@@ -705,19 +775,29 @@
     // ----- TIMER BUTTONS -----
     logFeedBtn.addEventListener('click', () => {
       state.lastFeedTime = Date.now();
+      state.fuelAlertActive = false;
+      state.fuelAlertText = '';
       lastFuelAlarmMs = 0;
       render();
     });
 
     logFastBtn.addEventListener('click', () => {
       state.lastFastCarbTime = Date.now();
+      state.fastCarbAlertActive = false;
+      state.fastCarbAlertText = '';
+      lastFastCarbAlarmMs = 0;
       render();
     });
 
     resetTimerBtn.addEventListener('click', () => {
       state.lastFeedTime = null;
       state.lastFastCarbTime = null;
+      state.fastCarbAlertActive = false;
+      state.fastCarbAlertText = '';
+      state.fuelAlertActive = false;
+      state.fuelAlertText = '';
       lastFuelAlarmMs = 0;
+      lastFastCarbAlarmMs = 0;
       render();
     });
 
@@ -733,10 +813,15 @@
           lastLowAlarmMs = 0;
           return `Low protocol active • Re-check in: ${remaining.toFixed(1)} min`;
         } else {
-          lastLowAlarmMs = maybeBeep(lastLowAlarmMs, LOW_ALARM_REPEAT_SEC);
+          state.lowAlertActive = true;
+          state.lowAlertText = 'Low re-check due';
+          lastLowAlarmMs = maybeAlarm(lastLowAlarmMs, LOW_ALARM_REPEAT_SEC, 'Low re-check due');
           return 'Low protocol: re-check window active.';
         }
       }
+
+      state.lowAlertActive = false;
+      state.lowAlertText = '';
 
       if (!state.lastFeedTime) return 'No feed logged yet';
 
@@ -798,12 +883,16 @@
           state.lowStartTime = now;
           state.lowRecoveredRecently = false;
           state.lowRecoverTime = null;
-          beepOnce();
+          state.lowAlertActive = true;
+          state.lowAlertText = 'Low. Stop cycling and take 15 grams fast carbs';
+          announce(state.lowAlertText);
           lastLowAlarmMs = 0;
         }
       } else {
         if (state.lowActive) {
           state.lowActive = false;
+          state.lowAlertActive = false;
+          state.lowAlertText = '';
           lastLowAlarmMs = 0;
           state.lowRecoveredRecently = true;
           state.lowRecoverTime = now;
@@ -1001,6 +1090,22 @@
       return 'var(--amber)';
     }
 
+    // ----- ALERT STATE MANAGEMENT -----
+    function buildFastCarbVoiceText(bgMmol, dir) {
+      if (bgMmol == null) return '';
+      let grams = 0;
+      if (bgMmol < 5.0) grams = getFastCarbByTrend(dir, 'under5');
+      else if (bgMmol < 7.0) grams = getFastCarbByTrend(dir, '5to7');
+      if (!grams) return '';
+      return `Fast carbs, ${grams} grams now`;
+    }
+
+    function buildFuelVoiceText(zone, carbsZ) {
+      if (!zone) return '';
+      const grams = carbsZ[zone - 1] || 0;
+      return `Fuel now, ${grams} grams`;
+    }
+
     // ----- RENDER -----
     function render() {
       const bgMmol = state.lastBgMmol;
@@ -1066,19 +1171,6 @@
         remainingMin = FUEL_INTERVAL_MIN - diffMin;
       }
 
-      if (!state.lowActive && remainingMin != null) {
-        const shouldAlarmForFuel =
-          bgMmol != null &&
-          bgMmol >= 7.0 &&
-          remainingMin <= 0;
-
-        if (shouldAlarmForFuel) {
-          lastFuelAlarmMs = maybeBeep(lastFuelAlarmMs, FUEL_ALARM_REPEAT_SEC);
-        } else {
-          lastFuelAlarmMs = 0;
-        }
-      }
-
       feedMain.textContent = getFuelInstruction(bgMmol, dir, zone, carbsZ, ageMin, remainingMin);
 
       if (state.projBg20_mg != null && state.useMmol) {
@@ -1097,6 +1189,40 @@
         logFastBtn.style.opacity = '1';
       } else {
         logFastBtn.style.opacity = '0.65';
+      }
+
+      // FAST CARB ALERTS
+      if (!state.lowActive && isFastCarbZone(bgMmol)) {
+        const text = buildFastCarbVoiceText(bgMmol, dir);
+        if (text) {
+          state.fastCarbAlertActive = true;
+          state.fastCarbAlertText = text;
+          lastFastCarbAlarmMs = maybeAlarm(lastFastCarbAlarmMs, FAST_ALARM_REPEAT_SEC, text);
+        }
+      } else {
+        state.fastCarbAlertActive = false;
+        state.fastCarbAlertText = '';
+        lastFastCarbAlarmMs = 0;
+      }
+
+      // MAIN FUEL ALERTS
+      if (!state.lowActive && remainingMin != null) {
+        const shouldAlarmForFuel =
+          bgMmol != null &&
+          bgMmol >= 7.0 &&
+          remainingMin <= 0 &&
+          !isFastCarbZone(bgMmol);
+
+        if (shouldAlarmForFuel) {
+          const fuelText = buildFuelVoiceText(zone, carbsZ);
+          state.fuelAlertActive = true;
+          state.fuelAlertText = fuelText;
+          lastFuelAlarmMs = maybeAlarm(lastFuelAlarmMs, FUEL_ALARM_REPEAT_SEC, fuelText);
+        } else {
+          state.fuelAlertActive = false;
+          state.fuelAlertText = '';
+          lastFuelAlarmMs = 0;
+        }
       }
     }
 
